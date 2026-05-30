@@ -42,6 +42,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 addDatabase(builder.Services, builder.Configuration);
 
+builder.Services.AddSingleton<Web.Data.Services.OpenMeteoService>();
+
+////////////////
+// Workers
+////////////////
+
 builder.Services.AddHostedService<Web.Data.BkgWorkers.ExternalArchiver>();
 builder.Services.AddHostedService<Web.Data.BkgWorkers.OldDataArchiver>();
 builder.Services.AddHostedService(i =>
@@ -60,7 +66,8 @@ builder.Services.AddHostedService(i =>
 Web.Data.Controllers.Maintenance.ApiKey = builder.Configuration["maintenance-key"] ?? string.Empty;
 
 Web.Data.BkgWorkers.WeatherMeteoBlue.API_KEY = builder.Configuration["meteoblue_key"] ?? string.Empty;
-builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherMeteoBlue>();
+//builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherMeteoBlue>();
+builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherOpenMeteo>();
 
 var app = builder.Build();
 app.UseSerilogRequestLogging(options =>

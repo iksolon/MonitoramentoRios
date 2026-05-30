@@ -182,11 +182,11 @@ public class TBWeather
     public DateTime ColetaUTC { get; set; }
 
     public bool LuzDia { get; set; }
-    public int UvIndex { get; set; }
+    public decimal UvIndex { get; set; }
     public decimal Temperatura { get; set; }
-    public decimal SensacaoTermica { get; set; }
-    public decimal Umidade { get; set; }
-    public decimal Pressao { get; set; }
+    public decimal? SensacaoTermica { get; set; }
+    public decimal? Umidade { get; set; }
+    public decimal? Pressao { get; set; }
     public decimal VentoVelocidade { get; set; }
     public int VentoDirecao { get; set; }
     public decimal PrecipitacaoProb { get; set; }

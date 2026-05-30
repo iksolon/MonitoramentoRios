@@ -159,7 +159,7 @@ public class WeatherMeteoBlue : IHostedService, IDisposable
             // DEMO KEY
             return "/packages/basic-1h_agro-1h?lat=47.56&lon=7.57&apikey=DEMOKEY&sig=e85c990f1d5d476b29eddd989ca56859";
         }
-        
+
         string sLat = lat.ToString(CultureInfo.InvariantCulture);
         string sLon = lon.ToString(CultureInfo.InvariantCulture);
 
