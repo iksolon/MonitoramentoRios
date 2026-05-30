@@ -66,8 +66,8 @@ builder.Services.AddHostedService(i =>
 Web.Data.Controllers.Maintenance.ApiKey = builder.Configuration["maintenance-key"] ?? string.Empty;
 
 Web.Data.BkgWorkers.WeatherMeteoBlue.API_KEY = builder.Configuration["meteoblue_key"] ?? string.Empty;
-//builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherMeteoBlue>();
-builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherOpenMeteo>();
+builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherMeteoBlue>();
+//builder.Services.AddHostedService<Web.Data.BkgWorkers.WeatherOpenMeteo>();
 
 var app = builder.Build();
 app.UseSerilogRequestLogging(options =>
