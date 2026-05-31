@@ -24,7 +24,11 @@ public class MultiServerSync : IHostedService, IDisposable
         this.key = key;
         this.logger = logger;
 
-        if (!string.IsNullOrEmpty(host)) client = new ClientInfo(host);
+        if (!string.IsNullOrEmpty(host))
+        {
+            client = new ClientInfo(host);
+            client.SetHeader("User-Agent", "MonitoraRios/MultiServer-SYNC");
+        }
     }
     public void Dispose()
     {
