@@ -184,14 +184,16 @@ public class TBWeather
     public bool LuzDia { get; set; }
     public decimal UvIndex { get; set; }
     public decimal Temperatura { get; set; }
-    public decimal? SensacaoTermica { get; set; }
-    public decimal? Umidade { get; set; }
-    public decimal? Pressao { get; set; }
+    public decimal SensacaoTermica { get; set; }
+    public decimal Umidade { get; set; }
+    public decimal Pressao { get; set; }
     public decimal VentoVelocidade { get; set; }
     public int VentoDirecao { get; set; }
     public decimal PrecipitacaoProb { get; set; }
     public decimal Precipitacao { get; set; }
     public int PictoCode { get; set; }
+    [DefaultValue(-1)]
+    public int WMOCode { get; set; }
 
     public decimal Lat {  get; set; }
     public decimal Lon {  get; set; }

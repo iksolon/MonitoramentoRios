@@ -27,7 +27,8 @@ public class OpenMeteoService
                             "cloud_cover","cloud_cover_low","cloud_cover_mid","cloud_cover_high",
                             "weather_code","visibility",
                             "wind_speed_10m","wind_direction_10m","wind_gusts_10m",
-                            "is_day","uv_index"
+                            "is_day","uv_index",
+                            "apparent_temperature","relative_humidity_2m"
                        ]),
                        7);
         r.EnsureSuccessStatusCode();
@@ -71,11 +72,14 @@ public class OpenMeteoResultDTO
         public string wind_gusts_10m { get; set; }
         public string is_day { get; set; }
         public string uv_index { get; set; }
+        public string apparent_temperature { get; set; }
+        public string relative_humidity_2m { get; set; }
     }
 
     public class Hourly
     {
         public DateTime[] time { get; set; }
+        public int[] weather_code { get; set; }
         public decimal[] temperature_2m { get; set; }
         public decimal[] precipitation { get; set; }
         public decimal[] precipitation_probability { get; set; }
@@ -84,14 +88,14 @@ public class OpenMeteoResultDTO
         public decimal[] cloud_cover_low { get; set; }
         public decimal[] cloud_cover_mid { get; set; }
         public decimal[] cloud_cover_high { get; set; }
-        public decimal[] weather_code { get; set; }
         public decimal[] visibility { get; set; }
-
         public decimal[] wind_speed_10m { get; set; }
         public decimal[] wind_direction_10m { get; set; }
         public decimal[] wind_gusts_10m { get; set; }
         public decimal[] is_day { get; set; }
         public decimal[] uv_index { get; set; }
+        public decimal[] apparent_temperature { get; set; }
+        public decimal[] relative_humidity_2m { get; set; }
     }
 
 }

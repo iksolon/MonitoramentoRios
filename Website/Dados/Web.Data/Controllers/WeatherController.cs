@@ -73,7 +73,12 @@ public class WeatherController : ControllerBase
     [HttpGet("ext")]
     public IActionResult ObterExtendido()
     {
-        return Ok(db.ObterWeatherEstendido("RSRL"));
+        var extData = db.ObterWeatherEstendido("RSRL");
+
+        var nowBRT = DateTime.Now.AddHours(-3);
+        var midnightBrtAtUTC = new DateTime(nowBRT.Year, nowBRT.Month, nowBRT.Day, 3, 0, 0, DateTimeKind.Utc);
+
+        return Ok(extData.Where(o => o.ForecastUTC >= midnightBrtAtUTC));
     }
 
     public record WeatherAgrupado

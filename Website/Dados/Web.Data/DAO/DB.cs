@@ -490,7 +490,7 @@ public class DB
     public void RegistraWeather(IEnumerable<DBModels.TBWeather> data)
     {
         using var cnn = db.GetConnection();
-        cnn.BulkInsert(data, OnConflict.Ignore);
+        cnn.BulkInsert(data, OnConflict.Abort);
     }
     public IEnumerable<DBModels.TBWeather> ObterWeatherProximasHoras(string regiao, int hour = 12)
     {

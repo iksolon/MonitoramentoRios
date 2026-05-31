@@ -66,6 +66,7 @@ public class WeatherOpenMeteo(DB db, ILogger logger, OpenMeteoService openMeteoS
             try
             {
                 var previsao = await openMeteoService.ObterPrevisaoLocalidade(local);
+                var dhColeta = DateTime.UtcNow;
 
                 var d1h = previsao.hourly;
                 var lst = new List<DAO.DBModels.TBWeather>();
@@ -74,7 +75,7 @@ public class WeatherOpenMeteo(DB db, ILogger logger, OpenMeteoService openMeteoS
                     lst.Add(new DAO.DBModels.TBWeather
                     {
                         Id = 0,
-                        ColetaUTC = DateTime.UtcNow,
+                        ColetaUTC = dhColeta, // Mesma data para todos os registros
                         Lat = Convert.ToDecimal(previsao.latitude),
                         Lon = Convert.ToDecimal(previsao.longitude),
 
@@ -82,14 +83,15 @@ public class WeatherOpenMeteo(DB db, ILogger logger, OpenMeteoService openMeteoS
                         LuzDia = d1h.is_day[i] > 0,
                         UvIndex = d1h.uv_index[i],
                         Temperatura = d1h.temperature_2m[i],
-                        //SensacaoTermica = d1h.felttemperature[i],
-                        //Umidade = d1h.relativehumidity[i],
+                        SensacaoTermica = d1h.apparent_temperature[i],
+                        Umidade = d1h.relative_humidity_2m[i],
                         Precipitacao = d1h.precipitation[i],
                         PrecipitacaoProb = d1h.precipitation_probability[i],
                         VentoVelocidade = d1h.wind_speed_10m[i],
                         VentoDirecao = (int)d1h.wind_direction_10m[i],
                         Pressao = d1h.surface_pressure[i],
                         PictoCode = -1,
+                        WMOCode = d1h.weather_code[i],
                         RegionCode = local.Code
                     });
                 }
