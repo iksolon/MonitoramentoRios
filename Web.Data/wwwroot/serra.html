@@ -268,6 +268,29 @@ section{ margin-top: 18px; }
 .cl .ln{ width:16px; height:3px; border-radius:2px; flex:0 0 auto; }
 .cl b{ font-weight:600; color: var(--pine-deep); }
 
+/* Mapa de calor da chuva: escala em variaveis para o modo tempestade trocar */
+:root{
+  --hm-nd: oklch(0.930 0.004 150);
+  --hm-0:  oklch(0.955 0.008 200);
+  --hm-1:  oklch(0.885 0.040 205);
+  --hm-2:  oklch(0.790 0.070 205);
+  --hm-3:  oklch(0.660 0.098 208);
+  --hm-4:  oklch(0.560 0.120 45);
+  --hm-5:  oklch(0.500 0.170 32);
+}
+body.storm{
+  --hm-nd: oklch(0.30 0.015 240);
+  --hm-0:  oklch(0.345 0.020 240);
+  --hm-1:  oklch(0.425 0.045 215);
+  --hm-2:  oklch(0.530 0.075 210);
+  --hm-3:  oklch(0.660 0.100 205);
+  --hm-4:  oklch(0.660 0.135 55);
+  --hm-5:  oklch(0.620 0.175 35);
+}
+.cl .sw{ width:13px; height:13px; border-radius:3px; flex:0 0 auto; border:1px solid oklch(0.30 0.03 150 / 0.12); }
+.chart-read{ margin:9px 2px 0; padding:8px 11px; border-radius:var(--r); background: var(--surface-2); border-left:3px solid var(--teal-deep); font-size:0.82rem; line-height:1.45; color:var(--ink-2); }
+.chart-read b{ color:var(--pine-deep); font-weight:600; }
+
 /* Sparklines de contexto */
 .context{ padding: 14px; }
 .ctx-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
@@ -570,11 +593,12 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 
     <!-- SERIES -->
     <section class="panel series reveal d5" aria-labelledby="sr-h">
-      <div class="sec-head"><div><div class="eyebrow">Últimas horas</div><h2 id="sr-h">Chuva e nível no tempo</h2></div></div>
+      <div class="sec-head"><div><div class="eyebrow">Últimas horas</div><h2 id="sr-h">Chuva hora a hora</h2></div></div>
       <div class="chart-block">
-        <div class="chart-title"><h3>Chuva medida pelas estações</h3><span class="u">mm/h · últimas 36 h</span></div>
-        <div class="chart-wrap"><svg id="chart-rainobs" viewBox="0 0 360 172" role="img" aria-label="Chuva medida por hora pelas estações da rede, últimas 36 horas."></svg></div>
-        <div class="chart-legend" id="rainobs-legend"></div>
+        <div class="chart-title"><h3>Onde está chovendo</h3><span class="u">mm/h por estação · últimas 36 h</span></div>
+        <div class="chart-wrap"><svg id="chart-rainmap" role="img" aria-label="Mapa de calor da chuva medida por estação em cada hora, com a faixa de abrangência da rede."></svg></div>
+        <p class="chart-read" id="rainmap-read"></p>
+        <div class="chart-legend" id="rainmap-legend"></div>
       </div>
       <div class="chart-block">
         <div class="chart-title"><h3>Chuva prevista por hora</h3><span class="u">mm/h · 3 h atrás &rarr; próximas 48 h</span></div>
@@ -585,11 +609,6 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
           <span class="cl"><span class="ln" style="background:var(--alert)"></span> forte (&ge; 8 mm/h)</span>
           <span class="cl" style="color:var(--muted)">passe o mouse para ver a hora · linha tracejada = agora; barras esmaecidas já passaram</span>
         </div>
-      </div>
-      <div class="chart-block">
-        <div class="chart-title"><h3>Nível dos rios</h3><span class="u">metros</span></div>
-        <div class="chart-wrap"><svg id="chart-level" viewBox="0 0 360 182" role="img" aria-label="Nível dos rios ao longo do tempo."></svg></div>
-        <div class="chart-legend" id="level-legend"></div>
       </div>
     </section>
 
@@ -1110,42 +1129,88 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     hit.addEventListener("touchend",off);
     hit.addEventListener("touchcancel",off);
   }
-  function chartRainObs(){
-    const svg=$("#chart-rainobs"), leg=$("#rainobs-legend"); if(!svg) return;
-    const Wv=360,Hv=172,L=30,R=12,T=14,B=26, off=HMAX-CH;
-    const sts=NET.rainSt.filter(s=>Array.isArray(s.rain));
-    if(!sts.length){ svg.innerHTML='<text x="180" y="90" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--font-sans)">nenhuma estação de chuva com sinal</text>'; if(leg) leg.innerHTML=""; return; }
-    const mx=[]; for(let i=0;i<CH;i++){ let m=0; sts.forEach(s=>{ const v=s.rain[off+i]||0; if(v>m)m=v; }); mx.push(m); }
-    const peak=Math.max.apply(null,mx);
-    const yMax=Math.max(2,Math.ceil(peak*1.15)), a=[];
-    const xs=i=>L+i*(Wv-L-R)/(CH-1), ys=v=>(Hv-B)-v/yMax*(Hv-B-T);
-    for(let g=0;g<=2;g++){ const val=yMax*g/2,yy=ys(val); a.push('<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)"/>'); a.push('<text x="'+(L-5)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+fmt(val,val>=10?0:1)+'</text>'); }
-    const bw=Math.max(1.6,(Wv-L-R)/CH*0.66);
-    for(let i=0;i<CH;i++){ if(mx[i]<=0) continue; const x=xs(i)-bw/2,y=ys(mx[i]),h=(Hv-B)-y,col=mx[i]>=8?"var(--alert)":mx[i]>=3?"var(--terra-deep)":"var(--teal)";
-      a.push('<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0.6,h).toFixed(1)+'" rx="1" fill="'+col+'"><title>'+labels[off+i]+': '+fmt(mx[i],1)+' mm/h</title></rect>'); }
-    if(peak<=0) a.push('<text x="180" y="86" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="var(--font-sans)">sem chuva registrada nas últimas 36 h</text>');
-    [0,9,18,27,35].forEach(i=>a.push('<text x="'+xs(i).toFixed(1)+'" y="'+(Hv-9)+'" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+labels[off+i]+'</text>'));
-    svg.innerHTML=a.join("");
-    if(leg){ const t0=sts[0];
-      leg.innerHTML='<span class="cl"><span class="ln" style="background:var(--teal)"></span>barra = maior mm/h entre as '+sts.length+' estações</span>'+
-        (t0?'<span class="cl" style="color:var(--muted)">máx. 24 h: <b>'+t0.reg.code+'</b> '+fmt(t0.rain24,1)+' mm</span>':''); }
+  /* ===== chuva medida: mapa de calor estacao x hora + faixa de abrangencia =====
+     O grafico anterior desenhava so o maximo da rede por hora, o que apagava
+     justamente a informacao procurada: uma estacao sob temporal ficava
+     identica a rede inteira chovendo. Com uma linha por estacao, os tres
+     casos viram formas distintas: coluna cheia = chuva geral, linha unica =
+     chuva isolada, mancha diagonal = frente descendo a serra. */
+  const RAIN_WET=0.2;   // abaixo disso e traco/garoa; nao conta como abrangencia
+  const HM=[[0.05,"--hm-0"],[0.5,"--hm-1"],[2,"--hm-2"],[5,"--hm-3"],[10,"--hm-4"]];
+  function hmCol(v){ for(let i=0;i<HM.length;i++) if(v<HM[i][0]) return "var("+HM[i][1]+")"; return "var(--hm-5)"; }
+  function rainRowsOrdered(){
+    const rank={areia:0,rolante:1};
+    return NET.rainSt.filter(s=>Array.isArray(s.rain)).slice()
+      .sort((a,b)=>(rank[a.reg.bacia]-rank[b.reg.bacia])||(b.reg.alt-a.reg.alt));
   }
-  function chartLevel(){
-    const svg=$("#chart-level"), Wv=360,Hv=182,L=28,R=14,T=14,B=26; const off=HMAX-CH;
-    const pal=["var(--teal-deep)","var(--terra-deep)","var(--granite)","var(--pine)"];
-    const gs=NET.gauges.filter(s=>Array.isArray(s.level)).slice(0,4).map((s,i)=>[s,pal[i%pal.length]]);
-    if(!gs.length){ svg.innerHTML='<text x="180" y="90" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--font-sans)">nenhuma régua com sinal</text>'; $("#level-legend").innerHTML=""; return; }
-    const all=[]; gs.forEach(x=>{ x[0].level.slice(off).forEach(v=>all.push(v)); if(x[0].reg.cotaAlerta) all.push(x[0].reg.cotaAlerta); });
-    const yMax=Math.max(0.5,Math.max.apply(null,all)*1.12), yMin=Math.max(0,Math.min.apply(null,all)*0.9);
-    const xs=i=>L+i*(Wv-L-R)/(CH-1), ys=v=>(Hv-B)-(v-yMin)/((yMax-yMin)||1)*(Hv-B-T), p=[];
-    for(let g=0;g<=3;g++){ const val=yMin+(yMax-yMin)*g/3,yy=ys(val); p.push('<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)"/>'); p.push('<text x="'+(L-5)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+fmt(val,1)+'</text>'); }
-    [0,9,18,27,35].forEach(i=>p.push('<text x="'+xs(i).toFixed(1)+'" y="'+(Hv-9)+'" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+labels[off+i]+'</text>'));
-    gs.forEach(x=>{ const sObj=x[0],col=x[1],pp=sObj.level.slice(off).map((v,i)=>[xs(i),ys(v)]);
-      p.push('<path'+(sObj.levelCheck?'':' class="chart-line"')+' d="'+smoothPath(pp)+'" fill="none" stroke="'+col+'" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"'+(sObj.levelCheck?' stroke-dasharray="5 4" opacity="0.7"':'')+'/>');
-      if(sObj.reg.cotaAlerta) p.push('<line x1="'+L+'" y1="'+ys(sObj.reg.cotaAlerta).toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+ys(sObj.reg.cotaAlerta).toFixed(1)+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>');
-      p.push('<circle cx="'+xs(CH-1).toFixed(1)+'" cy="'+ys(sObj.nowLevel).toFixed(1)+'" r="2.6" fill="'+col+'"/>'); });
-    svg.innerHTML=p.join(""); prepDraw(svg);
-    $("#level-legend").innerHTML=gs.map(x=>'<span class="cl"><span class="ln" style="background:'+x[1]+'"></span>'+x[0].reg.code+(x[0].levelCheck?' <i style="font-style:normal;color:var(--warn-deep)">(conferência)</i>':'')+'</span>').join("")+'<span class="cl" style="color:var(--muted)">tracejado = cota de alerta</span>';
+  function coverage(sts,off){
+    const out=[];
+    for(let i=0;i<CH;i++){ let n=0,t=0,mx=0;
+      sts.forEach(s=>{ const v=s.rain[off+i]; if(v!=null){ t++; if(v>=RAIN_WET) n++; if(v>mx) mx=v; } });
+      out.push({n:n,t:t,mx:mx}); }
+    return out;
+  }
+  function chartRainMap(){
+    const svg=$("#chart-rainmap"), leg=$("#rainmap-legend"), read=$("#rainmap-read"); if(!svg) return;
+    const off=HMAX-CH, sts=rainRowsOrdered();
+    if(!sts.length){
+      svg.setAttribute("viewBox","0 0 360 80");
+      svg.innerHTML='<text x="180" y="44" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--font-sans)">nenhuma estação de chuva com sinal</text>';
+      if(leg) leg.innerHTML=""; if(read) read.textContent="Sem estação de chuva reportando agora."; return;
+    }
+    const Wv=360,padL=70,padR=8,y0=3,sh=26,gapS=13,rowH=15,gap=2,grpGap=11,padB=18;
+    const padT=y0+sh+gapS, cw=(Wv-padL-padR)/CH;
+    /* cada troca de bacia abre um respiro para caber o rotulo do grupo */
+    let grps=0, seen=null; sts.forEach(s=>{ if(s.reg.bacia!==seen){ seen=s.reg.bacia; grps++; } });
+    const Hv=padT+sts.length*(rowH+gap)+(grps-1)*grpGap+padB;
+    const cov=coverage(sts,off), a=[];
+    /* faixa de abrangencia: altura = fracao das estacoes com chuva naquela hora */
+    a.push('<text x="'+(padL-6)+'" y="'+(y0+11)+'" text-anchor="end" font-size="8" font-weight="700" fill="var(--muted)" font-family="var(--font-sans)">abrangência</text>');
+    a.push('<text x="'+(padL-6)+'" y="'+(y0+21)+'" text-anchor="end" font-size="7.4" fill="var(--faint)" font-family="var(--font-sans)">de '+sts.length+' estações</text>');
+    a.push('<rect x="'+padL+'" y="'+y0+'" width="'+(Wv-padL-padR).toFixed(1)+'" height="'+sh+'" rx="3" fill="var(--hm-nd)" opacity="0.55"/>');
+    cov.forEach((c,i)=>{ if(!c.t||!c.n) return; const f=c.n/c.t, h=Math.max(1.6,sh*f);
+      a.push('<rect x="'+(padL+i*cw+0.4).toFixed(1)+'" y="'+(y0+sh-h).toFixed(1)+'" width="'+(cw-0.8).toFixed(1)+'" height="'+h.toFixed(1)+'" rx="1" fill="'+(f>=0.8?"var(--alert)":f>=0.5?"var(--terra-deep)":"var(--teal)")+'"><title>'+labels[off+i]+': '+c.n+' de '+c.t+' estações com chuva</title></rect>'); });
+    a.push('<line x1="'+padL+'" y1="'+(y0+sh)+'" x2="'+(Wv-padR)+'" y2="'+(y0+sh)+'" stroke="var(--line-2)"/>');
+    /* uma linha por estacao, da cabeceira para a cidade dentro de cada bacia */
+    let prev=null, y=padT;
+    sts.forEach(function(s){
+      if(s.reg.bacia!==prev){
+        if(prev!==null) y+=grpGap;
+        prev=s.reg.bacia;
+        a.push('<text x="0" y="'+(y-3.5).toFixed(1)+'" font-size="6.8" font-weight="700" letter-spacing="0.05em" fill="var(--faint)" font-family="var(--font-sans)">'+(s.reg.bacia==="areia"?"BACIA DO AREIA":"BACIA DO ROLANTE")+'</text>');
+      }
+      a.push('<text x="'+(padL-6)+'" y="'+(y+rowH*0.74).toFixed(1)+'" text-anchor="end" font-size="8" font-weight="600" fill="var(--ink-2)" font-family="var(--font-sans)">'+s.reg.code+'</text>');
+      for(let i=0;i<CH;i++){ const v=s.rain[off+i];
+        a.push('<rect x="'+(padL+i*cw+0.35).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(cw-0.7).toFixed(1)+'" height="'+rowH+'" rx="1.5" fill="'+(v==null?"var(--hm-nd)":hmCol(v))+'"><title>'+s.reg.code+' ('+s.reg.rio+') · '+labels[off+i]+': '+(v==null?"sem dado":fmt(v,1)+" mm/h")+'</title></rect>'); }
+      y+=rowH+gap;
+    });
+    const yb=y-gap;
+    [0,9,18,27].forEach(i=>a.push('<text x="'+(padL+i*cw+cw/2).toFixed(1)+'" y="'+(yb+11)+'" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+labels[off+i]+'</text>'));
+    a.push('<text x="'+(Wv-padR)+'" y="'+(yb+11)+'" text-anchor="end" font-size="8.5" font-weight="600" fill="var(--ink-2)" font-family="var(--font-sans)">agora</text>');
+    svg.setAttribute("viewBox","0 0 "+Wv+" "+Hv.toFixed(0));
+    svg.innerHTML=a.join("");
+    if(read) read.innerHTML=rainSpreadTxt(cov,sts.length);
+    if(leg) leg.innerHTML=
+      '<span class="cl"><span class="sw" style="background:var(--hm-0)"></span>sem chuva</span>'+
+      '<span class="cl"><span class="sw" style="background:var(--hm-2)"></span>fraca</span>'+
+      '<span class="cl"><span class="sw" style="background:var(--hm-3)"></span>moderada</span>'+
+      '<span class="cl"><span class="sw" style="background:var(--hm-4)"></span>forte</span>'+
+      '<span class="cl"><span class="sw" style="background:var(--hm-5)"></span>muito forte</span>'+
+      '<span class="cl" style="color:var(--muted)">cada linha é uma estação, da cabeceira para a cidade · cinza = sem dado</span>'+
+      '<span class="cl" style="color:var(--muted)">faixa de cima: altura = quantas estações estavam com chuva naquela hora</span>';
+  }
+  /* Le a faixa de abrangencia em palavras: e a resposta para "chove em toda a
+     regiao ou so num ponto?", que o grafico de maximo nao conseguia dar. */
+  function rainSpreadTxt(cov,tot){
+    const last=cov[CH-1];
+    let peak={n:0,i:0,mx:0};
+    cov.forEach((c,i)=>{ if(c.n>peak.n||(c.n===peak.n&&c.mx>peak.mx)) peak={n:c.n,i:i,mx:c.mx}; });
+    if(!peak.n) return "Nenhuma estação passou de "+fmt(RAIN_WET,1)+" mm/h nas últimas 36 h — no máximo traço de garoa.";
+    const frac=peak.n/tot;
+    const tipo=frac>=0.8?"<b>chuva geral</b> na região":frac>=0.4?"<b>chuva espalhada</b>, não em toda a rede":"<b>chuva isolada</b>, em poucos pontos";
+    const forca=peak.mx>=10?"forte":peak.mx>=5?"moderada":peak.mx>=2?"fraca":"muito fraca";
+    const agora=last.n?("Agora: "+last.n+" de "+tot+" com chuva."):"Agora nenhuma estação com chuva.";
+    return tipo+", intensidade "+forca+" — no pico, "+peak.n+" de "+tot+" estações chovendo ao mesmo tempo, às "+labels[HMAX-CH+peak.i]+" (máx. "+fmt(peak.mx,1)+" mm/h). "+agora;
   }
   function renderContext(){
     const cand=REG.map(r=>ST[r.code]).filter(s=>s&&s.live&&s.now.temp!=null);
@@ -1173,7 +1238,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     buildContours();
     aggregateBasins(); NET=netSummary(); computeRisk();
     $("#clock").textContent=gen.split(" ")[1]+" BRT";
-    renderNetCard(); renderRisk(); renderForecast(); renderGauges(); renderBasins(); chartRain(); chartRainObs(); chartLevel(); renderContext(); buildFooter(); applyStormMode();
+    renderNetCard(); renderRisk(); renderForecast(); renderGauges(); renderBasins(); chartRain(); chartRainMap(); renderContext(); buildFooter(); applyStormMode();
     requestAnimationFrame(()=>document.body.classList.add("ready"));
   }
   function showEmpty(){ $("#risk-h").textContent="Sem dados das estações no momento."; $("#risk-drivers").textContent="Tentando novamente em instantes."; buildContours(); buildFooter(); document.body.classList.add("ready"); }
