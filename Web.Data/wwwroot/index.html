@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sistema de Monitoramento dos Rios</title>
+
+    <script>
+        checkDomain();
+        function checkDomain() {
+            let domain = window.location.hostname;
+            console.log(domain);
+            if (domain.includes("bitcoineaqui")) {
+                console.log("BitcoinEAqui>RSRL");
+                window.location.href = "serra.html";
+                return;
+            }
+
+            // default
+            console.log("DEF>RSRL");
+            window.location.href = "serra.html";
+        }
+    </script>
+    <style>
+        .content {
+            height: 300px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #FFF;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: inline-block;
+            box-sizing: border-box;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+<body style="background-color: darkslategray">
+    <div class="content">
+        <span class="loader"></span>
+    </div>
+</body>
+</html>

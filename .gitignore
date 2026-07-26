@@ -395,3 +395,34 @@ appsettings**.json
 data/
 Firmware/Arduino_v0.1/dados_estacao.h
 Montagem/Acessorios/**.stl
+
+## .NET build output
+bin/
+obj/
+*.user
+*.suo
+*.userprefs
+
+## Dados e logs locais (nunca versionar banco)
+Web.Data/data/
+**/logs/
+*.db
+*.db-wal
+*.db-shm
+*.log
+
+## Configuração local
+appsettings.Development.json
+appsettings.Staging.json
+.env
+
+## Editores / OS
+.vs/
+.idea/
+.vscode/
+.DS_Store
+
+## Artefatos de ferramentas
+.preview_demo.json
+.od-skills/
+*.artifact.json

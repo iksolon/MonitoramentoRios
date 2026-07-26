@@ -1,0 +1,161 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="60">
+    <title>Dados das Estações</title>
+    <style>
+        table {
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+    <script type="text/javascript" src="helpers.js"></script>
+</head>
+<body>
+    <a href="/">Voltar à Home</a>
+    <h2>Últimas Leituras</h2>
+    <table id="ultimasLeituras">
+        <thead>
+            <tr>
+                <th>Data e Hora (UTC)</th>
+                <th>Estação</th>
+                <th>Tensão da Bateria</th>
+                <th width="100px">Temperatura do Ar</th>
+                <th width="100px">Umidade do Ar</th>
+                <th>Precipitação</th>
+                <th>Nível da Água</th>
+                <th>Sinal Conexão</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dados serão preenchidos dinamicamente aqui -->
+        </tbody>
+    </table>
+
+    <h2>Dados Históricos</h2>
+    <table id="dadosEstacoes">
+        <thead>
+            <tr>
+                <th>Data e Hora (UTC)</th>
+                <th>Estação</th>
+                <th>Tensão da Bateria</th>
+                <th width="100px">Temperatura do Ar</th>
+                <th width="100px">Umidade do Ar</th>
+                <th>Precipitação</th>
+                <th>Nível da Água</th>
+                <th>Sinal Conexão</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Dados serão preenchidos dinamicamente aqui -->
+        </tbody>
+    </table>
+    <p>Veja mais em: <a href="https://github.com/RafaelEstevamReis/MonitoramentoRios" target="_blank">gh/MonitoramentoRios</a></p>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Fazendo o request para o endpoint
+            fetch('/estacoes/dados')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#dadosEstacoes tbody');
+                    data.forEach(dado => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                                        <td>${new Date(dado.dataHoraDadosUTC).toLocaleString()}</td>
+                                        <td>${dado.nomeEstacao || dado.estacao}</td>
+                                        <td>${formatValue(dado.tensaoBateria, 1)}v</td>
+                                        <td>${formatValue(dado.temperaturaAr, 1) }ºC</td>
+                                        <td>${formatValue(dado.umidadeAr, 1) }%</td>
+                                        <td>${formatValue(dado.precipitacao, 1)}</td>
+                                        <td>${formatValue(dado.nivelRio, 1)}m</td>
+                                        <td>${wifiSignalToPercent(dado.forcaSinal)}</td>
+                                    `;
+                        tableBody.appendChild(row);
+                        setColor(row, dado.nomeEstacao);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar dados das estações:', error);
+                });
+
+            fetch('/estacoes/ultimos')
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector('#ultimasLeituras tbody');
+                    let espacoEX = false;
+                    data.forEach(dado => {
+                        if (!espacoEX && !dado.nomeEstacao.startsWith("EX")) {
+                            espacoEX = true;
+                            const empty = document.createElement('tr');
+                            empty.innerHTML = '<td colspan=9> </td>';
+
+                            tableBody.appendChild(empty);
+                        }
+
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                                                <td>${new Date(dado.dataHoraDadosUTC).toLocaleString()}</td>
+                                                <td>${dado.nomeEstacao || dado.estacao}</td>
+                                                <td>${formatValue(dado.tensaoBateria, 1)}v (${formatValue(dado.percentBateria, 0)}%)</td>
+                                                <td>${formatValue(dado.temperaturaAr, 1)}ºC</td>
+                                                <td>${formatValue(dado.umidadeAr, 1)}%</td>
+                                                <td>${formatValue(dado.precipitacao, 1)}</td>
+                                                <td>${formatValue(dado.nivelRio, 1, 'm')}</td>
+                                                <td>${wifiSignalToPercent(dado.forcaSinal)}</td>
+                                                <td><a href="live.html?estacao=${dado.estacao}">Resumo</a> | <a href="estacao.html?estacao=${dado.estacao}">Detalhar</a> </td>
+                                            `;
+                        tableBody.appendChild(row);
+                        setColor(row, dado.nomeEstacao);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar dados das estações:', error);
+                });
+
+        });
+
+        const colorList = ['lightblue', 'lightgreen', 'lightgoldenrodyellow', 'antiquewhite', 'aliceblue', 'lightpink', 'aquamarine', 'beige', 'yellowgreen', 'skyblue'];
+        function setColor(element, idEstacao) {
+            if (idEstacao === 'RSRL-RB01') {
+                element.style.backgroundColor = 'azure';
+                return;
+            }
+            if (idEstacao === 'RSRL-BE01') {
+                element.style.backgroundColor = 'darkseagreen';
+                return;
+            }
+
+            const hsh = getHash(idEstacao);
+            // Gera um índice determinístico baseado no idEstacao
+            const index = hsh % colorList.length;
+            // Define a cor de fundo do elemento com base no índice
+            element.style.backgroundColor = colorList[index];
+            //console.log(`Hash para '${idEstacao}': ${hsh} IX: ${index} Color: ${colorList[index]}`);
+        }
+        function getHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = (hash << 5) - hash + str.charCodeAt(i);
+                hash |= 0; // Converte para um inteiro de 32 bits
+            }
+
+            return Math.abs(hash); // Garantimos que o valor seja positivo
+        }
+
+    </script>
+</body>
+</html>
