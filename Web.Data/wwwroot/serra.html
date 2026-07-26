@@ -664,7 +664,8 @@ body.storm .net-banner b{ color: var(--ink); }
       let sinceStart=null;
       if(rain){ sinceStart=0; let gap=0; for(let i=HMAX-1;i>=0;i--){ if(rain[i]>0.1){ sinceStart+=rain[i]; gap=0; } else { gap++; if(gap>2) break; } } }
       const live=h.rows.some(r=>r.hourKey>=maxHK-3)||!!byId[h.id];
-      out[reg.code]={ reg, live, hasRain, hasLevel,
+      let rainIdxLast=null; if(hasRain){ for(let i=HMAX-1;i>=0;i--){ if(rainR[i]!=null){ rainIdxLast=i; break; } } }
+      out[reg.code]={ reg, live, hasRain, hasLevel, rainIdxLast,
         levelTrust: hasLevel&&LEVEL_TRUST.has(reg.code), levelCheck: hasLevel&&LEVEL_CHECK.has(reg.code),
         rain, level, tempH:tempR, humH:humR, pressH:prR,
         nowLevel, trend, rain12, rain24, rain72prior, sinceStart,
@@ -677,15 +678,29 @@ body.storm .net-banner b{ color: var(--ink); }
 
   function pickGauge(arr){ let g=null; arr.forEach(s=>{ const f=s.reg.cotaAlerta?s.nowLevel/s.reg.cotaAlerta:0, gf=g?(g.reg.cotaAlerta?g.nowLevel/g.reg.cotaAlerta:0):-1; if(f>gf) g=s; }); return g; }
   function maxOf(arr,f){ return arr.length?Math.max.apply(null,arr.map(x=>f(x)||0)):null; }
-  /* chuva AGORA na estacao, em mm/h: pacote fresco (<=30 min) tem prioridade,
-     senao vale o bucket da hora corrente. Zero = nao esta chovendo ali. */
-  function rainNowOf(s){
-    if(!s||!s.hasRain||!s.live) return 0;
+  /* Estado de chuva da estacao para o panorama.
+     O bucket horario zera na virada da hora: sem uma janela de tolerancia o
+     efeito sumia mesmo tendo chovido 20 min atras. Entao:
+       h=0  -> chovendo agora (pacote fresco com 10 min de chuva, ou bucket da hora)
+       h1..3 -> choveu ha pouco, efeito atenuado
+     null  -> seco. Idade conta a partir do ultimo bucket com dado DA ESTACAO,
+     nao do relogio da rede (estacao atrasada nao pode fingir chuva atual). */
+  const RAIN_MIN=0.05, RAIN_RECENT_H=3;
+  function rainPulse(s){
+    if(!s||!s.hasRain||!s.live||s.rainIdxLast==null) return null;
     const fresh=s.now.ts!=null&&(Date.now()-s.now.ts)<=30*60*1000;
     const r10=(fresh&&s.now.rain10!=null)?s.now.rain10*6:0;
-    const hr=s.rain?(s.rain[HMAX-1]||0):0;
-    return Math.max(r10,hr);
+    if(r10>RAIN_MIN) return { mm:r10, h:0, now:true };
+    const lag=HMAX-1-s.rainIdxLast;
+    for(let k=0;k<=RAIN_RECENT_H;k++){
+      const i=s.rainIdxLast-k; if(i<0) break;
+      const v=s.rain[i]||0;
+      if(v>RAIN_MIN){ const h=k+lag; return h<=RAIN_RECENT_H? { mm:v, h, now:h===0 } : null; }
+    }
+    return null;
   }
+  function rainNowOf(s){ const q=rainPulse(s); return (q&&q.now)?q.mm:0; }
+  function pulseTxt(q){ return q.now? (fmt(q.mm,1)+" mm/h") : (fmt(q.mm,1)+" mm há "+q.h+" h"); }
 
   function aggregateBasins(){
     BAS={};
@@ -697,8 +712,10 @@ body.storm .net-banner b{ color: var(--ink); }
                         .sort((a,c)=>(c.levelTrust?1:0)-(a.levelTrust?1:0));
       const trusted=levelSt.filter(s=>s.levelTrust);
       const gauge=pickGauge(trusted)||pickGauge(levelSt.filter(s=>!s.levelCheck))||null;
-      const rainingNow=rainSt.filter(s=>rainNowOf(s)>0.05).sort((a,c)=>rainNowOf(c)-rainNowOf(a));
-      BAS[b.key]={ meta:b, all, live, rainSt, levelSt, trusted, gauge, rainingNow,
+      const pulses=rainSt.map(s=>({s,q:rainPulse(s)})).filter(o=>o.q);
+      const rainingNow=pulses.filter(o=>o.q.now).map(o=>o.s).sort((a,c)=>rainNowOf(c)-rainNowOf(a));
+      const rainRecent=pulses.filter(o=>!o.q.now).map(o=>o.s);
+      BAS[b.key]={ meta:b, all, live, rainSt, levelSt, trusted, gauge, rainingNow, rainRecent,
         rainNowMax:maxOf(rainSt,s=>rainNowOf(s)),
         rain12:maxOf(rainSt,s=>s.rain12), rain24:maxOf(rainSt,s=>s.rain24),
         rain24avg:rainSt.length?mean(rainSt.map(s=>s.rain24||0)):null,
@@ -896,10 +913,12 @@ body.storm .net-banner b{ color: var(--ink); }
         '<div class="basin-pano"><svg id="cut-'+key+'" viewBox="0 0 360 156" role="img" aria-label="Encosta da bacia do '+m.nome+' com as estações de chuva, onde chove agora e a régua de nível."></svg></div>'+
         '<p class="basin-cap">'+(B.rainingNow.length
             ? '<b style="color:var(--teal-deep)">Chovendo agora em '+B.rainingNow.map(s=>s.reg.code).join(", ")+'</b> — nuvem, pingos e pulso marcam o trecho do rio sob a chuva. '
-            : 'Nenhuma estação da bacia detectando chuva neste momento. ')+
+            : (B.rainRecent.length
+                ? '<b>Parou de chover.</b> Choveu há pouco em '+B.rainRecent.map(s=>s.reg.code+" ("+rainPulse(s).h+" h)").join(", ")+' — esses trechos aparecem com chuva esmaecida. '
+                : 'Nenhuma estação da bacia com chuva nas últimas 3 h. '))+
           'Pingos fixos = estações de chuva (tamanho conforme o acumulado de 24 h); losango = régua de nível. Barras abaixo: chuva medida por estação nas últimas 24 h.</p>'+
         '<div class="basin-nums">'+
-          '<div class="bn">Chovendo agora<b>'+B.rainingNow.length+' <small>de '+B.rainSt.length+(B.rainNowMax?(' · '+fmt(B.rainNowMax,1)+' mm/h'):'')+'</small></b></div>'+
+          '<div class="bn">Chovendo agora<b>'+B.rainingNow.length+' <small>de '+B.rainSt.length+(B.rainNowMax?(' · '+fmt(B.rainNowMax,1)+' mm/h'):(B.rainRecent.length?(' · '+B.rainRecent.length+' há pouco'):''))+'</small></b></div>'+
           '<div class="bn">Chuva 24 h medida<b>'+(B.rain24!=null?fmt(B.rain24,1):'-')+' <small>mm (máx.)</small></b></div>'+
           '<div class="bn">Chuva 12 h medida<b>'+(B.rain12!=null?fmt(B.rain12,1):'-')+' <small>mm</small></b></div>'+
           '<div class="bn">Chuva prevista 24 h<b>'+(FC?fmt(FC.next24,0):'-')+' <small>mm</small></b></div>'+
@@ -930,27 +949,30 @@ body.storm .net-banner b{ color: var(--ink); }
     const riverPts=pts.map(pp=>[pp.x,pp.y+4]); const riverD=smoothPath(riverPts);
     p.push('<path d="'+riverD+'" fill="none" stroke="oklch(0.47 0.082 212 / 0.3)" stroke-width="5" stroke-linecap="round"/>');
     p.push('<path class="pano-river" d="'+riverD+'" fill="none" stroke="var(--teal)" stroke-width="2.2" stroke-linecap="round"/>');
-    /* ===== chuva agora, por estacao: mostra em que trecho do rio esta chovendo ===== */
-    const wet=pts.map((pp,i)=>({pp,i,mm:rainNowOf(pp.s)})).filter(o=>o.mm>0.05);
+    /* ===== onde esta chovendo: efeito cheio agora, atenuado se foi ha pouco ===== */
+    const wet=pts.map((pp,i)=>({pp,i,q:rainPulse(pp.s)})).filter(o=>o.q);
     wet.forEach(o=>{
-      const cx=o.pp.x, cy=o.pp.y, mm=o.mm, inten=clamp(mm/8,0,1);
+      const cx=o.pp.x, cy=o.pp.y, q=o.q, mm=q.mm, live=q.now;
+      const inten=clamp(mm/8,0,1), dim=live?1:0.45;
       // trecho do rio sob a chuva, realcado
       const a=riverPts[Math.max(0,o.i-1)], c=riverPts[o.i], e=riverPts[Math.min(n-1,o.i+1)];
       const m1=[(a[0]+c[0])/2,(a[1]+c[1])/2], m2=[(c[0]+e[0])/2,(c[1]+e[1])/2];
-      p.push('<path class="pano-wetseg" d="'+smoothPath([m1,c,m2])+'" fill="none" stroke="var(--teal-soft)" stroke-width="'+(3.2+inten*1.6).toFixed(1)+'" stroke-linecap="round" opacity="'+(0.5+inten*0.35).toFixed(2)+'"/>');
+      p.push('<path'+(live?' class="pano-wetseg"':'')+' d="'+smoothPath([m1,c,m2])+'" fill="none" stroke="var(--teal-soft)" stroke-width="'+((live?3.2:2.4)+inten*1.6).toFixed(1)+'" stroke-linecap="round" opacity="'+((0.5+inten*0.35)*dim).toFixed(2)+'"'+(live?'':' stroke-dasharray="4 3"')+'/>');
       // nuvem + pingos so na faixa daquela estacao
-      const half=13+inten*9, top=Math.max(6,cy-30-inten*8), bot=cy+4;
-      p.push('<ellipse class="pano-cloud" cx="'+cx.toFixed(1)+'" cy="'+(top-3).toFixed(1)+'" rx="'+(half*0.95).toFixed(1)+'" ry="'+(3.6+inten*2.6).toFixed(1)+'" fill="oklch(0.52 0.035 240)" opacity="'+(0.42+inten*0.35).toFixed(2)+'"/>');
-      const nd=Math.round(clamp(5+mm*5,5,16));
+      const half=(live?13:10)+inten*9, top=Math.max(6,cy-30-inten*8), bot=cy+4;
+      p.push('<ellipse'+(live?' class="pano-cloud"':'')+' cx="'+cx.toFixed(1)+'" cy="'+(top-3).toFixed(1)+'" rx="'+(half*0.95).toFixed(1)+'" ry="'+((live?3.6:2.6)+inten*2.6).toFixed(1)+'" fill="oklch(0.52 0.035 240)" opacity="'+((0.42+inten*0.35)*dim).toFixed(2)+'"/>');
+      const nd=live? Math.round(clamp(5+mm*5,5,16)) : 3;
       for(let k=0;k<nd;k++){
         const dx=(cx-half+Math.random()*half*2).toFixed(1), t=top+Math.random()*7, fall=bot-t,
               dur=(0.5+Math.random()*0.35).toFixed(2), delay=(-Math.random()*dur).toFixed(2);
-        p.push('<line class="pano-drop" x1="'+dx+'" y1="'+t.toFixed(1)+'" x2="'+dx+'" y2="'+(t+3.4).toFixed(1)+'" style="--fall:'+fall.toFixed(1)+'px; animation-duration:'+dur+'s; animation-delay:'+delay+'s"/>');
+        p.push('<line class="pano-drop" x1="'+dx+'" y1="'+t.toFixed(1)+'" x2="'+dx+'" y2="'+(t+3.4).toFixed(1)+'" opacity="'+(0.72*dim).toFixed(2)+'" style="--fall:'+fall.toFixed(1)+'px; animation-duration:'+dur+'s; animation-delay:'+delay+'s"/>');
       }
-      // pulso no ponto da estacao + leitura em mm/h
-      p.push('<circle class="pano-halo" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="none" stroke="var(--teal-soft)" stroke-width="1.5"/>');
-      p.push('<circle class="pano-halo d2" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="none" stroke="var(--teal-soft)" stroke-width="1.1"/>');
-      p.push('<text class="pano-mm" x="'+cx.toFixed(1)+'" y="'+(cy+13).toFixed(1)+'" text-anchor="middle" font-size="6.4" font-weight="700" fill="oklch(0.96 0.06 205)" paint-order="stroke" stroke="oklch(0.26 0.045 238 / 0.8)" stroke-width="1.8" stroke-linejoin="round" font-family="var(--font-sans)">'+fmt(mm,1)+' mm/h</text>');
+      // pulso no ponto (so quando esta chovendo agora) + leitura
+      if(live){
+        p.push('<circle class="pano-halo" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="none" stroke="var(--teal-soft)" stroke-width="1.5"/>');
+        p.push('<circle class="pano-halo d2" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="none" stroke="var(--teal-soft)" stroke-width="1.1"/>');
+      }
+      p.push('<text'+(live?' class="pano-mm"':'')+' x="'+cx.toFixed(1)+'" y="'+(cy+13).toFixed(1)+'" text-anchor="middle" font-size="6.4" font-weight="700" fill="'+(live?"oklch(0.96 0.06 205)":"oklch(0.86 0.03 205)")+'" paint-order="stroke" stroke="oklch(0.26 0.045 238 / 0.8)" stroke-width="1.8" stroke-linejoin="round" font-family="var(--font-sans)">'+pulseTxt(q)+'</text>');
     });
     const g=B.gauge||B.levelSt[0]||null,gCheck=!!(g&&g.levelCheck),gx=322,gw=13,gTop=112,gBed=146; let frac=0;
     if(g&&g.nowLevel!=null){ frac=g.reg.cotaAlerta?clamp(g.nowLevel/g.reg.cotaAlerta,0,1):clamp((g.nowLevel-(g.lvMin||0))/(((g.lvMax||g.nowLevel)-(g.lvMin||0))||1),0.08,1); }
