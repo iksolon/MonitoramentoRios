@@ -51,6 +51,7 @@
   --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
 
   --maxw: 720px;
+  --rl-h: clamp(28px, 7.6vw, 34px);
 }
 
 *{ box-sizing: border-box; }
@@ -103,6 +104,44 @@ body{
 .dot{ width:7px; height:7px; border-radius:50%; background: var(--moss); box-shadow: 0 0 0 3px oklch(0.64 0.11 132 / 0.18); }
 .dot.pulse{ animation: pulse 2.6s ease-out infinite; }
 @keyframes pulse{ 0%{ box-shadow:0 0 0 0 oklch(0.64 0.11 132 / 0.30);} 70%{ box-shadow:0 0 0 7px oklch(0.64 0.11 132 / 0);} 100%{ box-shadow:0 0 0 0 oklch(0.64 0.11 132 / 0);} }
+
+/* Faixa de realizacao: quem assina o projeto */
+.realiza{
+  display: flex; align-items: center;
+  gap: 10px 16px; flex-wrap: wrap;
+  padding: 18px 2px 4px;
+}
+.realiza-tag{
+  display:inline-flex; align-items:center; gap:9px;
+  font-size: 0.605rem; font-weight:700; text-transform:uppercase; letter-spacing:0.17em;
+  color: var(--faint); white-space:nowrap;
+}
+.realiza-tag::before{ content:""; width:14px; height:1px; background: var(--line-2); }
+.realiza-rule{
+  flex: 1 1 30px; min-width: 24px; height:1px; align-self:center;
+  background: linear-gradient(90deg, var(--line-2) 0%, var(--line-2) 48%, transparent 100%);
+}
+.realiza-logos{ display:flex; align-items:center; gap:16px; min-width:0; }
+.realiza-logos .rl{
+  display:block; opacity:0.94;
+  transition: opacity .3s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1);
+}
+.realiza-logos .rl img{ display:block; width:auto; }
+.rl-bea img{ height: calc(var(--rl-h) * 1.62); }
+.rl-acisa img{ height: calc(var(--rl-h) * 0.94); }
+.realiza-sep{
+  flex:0 0 auto; width:1px; height:30px;
+  background: linear-gradient(180deg, transparent, var(--line-2) 22%, var(--line-2) 78%, transparent);
+}
+@media (hover:hover){
+  .realiza-logos .rl:hover{ opacity:1; transform: translateY(-1.5px); }
+}
+.realiza-logos .rl:focus-visible{ outline:2px solid var(--teal); outline-offset:5px; border-radius:3px; opacity:1; }
+@media (max-width: 430px){
+  .realiza{ justify-content: space-between; padding-top: 14px; }
+  .realiza-rule{ display:none; }
+  .realiza-logos{ gap: 13px; }
+}
 
 /* Blocos de secao */
 section{ margin-top: 18px; }
@@ -208,38 +247,6 @@ section{ margin-top: 18px; }
 
 /* Estacoes de nivel */
 .levels{ padding: 14px; }
-.lv-list{ display:flex; flex-direction: column; gap: 10px; }
-.lv{
-  display:grid; grid-template-columns: auto 1fr auto; gap: 4px 12px;
-  align-items:center;
-  padding: 12px 14px; border-radius: var(--r);
-  background: var(--surface-2); border: 1px solid var(--line);
-}
-.lv.lead{ background: linear-gradient(180deg, oklch(0.72 0.135 78 / 0.07), var(--surface)); border-color: oklch(0.72 0.135 78 / 0.30); padding: 15px 16px; }
-.lv-id{ grid-column: 1; display:flex; flex-direction:column; gap:2px; }
-.lv-id .nm{ font-weight:600; color: var(--pine-deep); font-size: 0.95rem; }
-.lv.lead .lv-id .nm{ font-size: 1.02rem; }
-.lv-id .rio{ font-size: 0.72rem; color: var(--muted); }
-.lv-read{ grid-column: 3; text-align:right; }
-.lv-read .now{ font-weight:600; color: var(--ink); font-size: 1.28rem; line-height:1; }
-.lv.lead .lv-read .now{ font-size: 1.7rem; }
-.lv-read .now u{ text-decoration:none; font-size:0.72rem; color: var(--muted); font-weight:600; }
-.lv-read .cota{ font-size: 0.70rem; color: var(--muted); margin-top:3px; }
-.lv-bar-row{ grid-column: 1 / -1; display:flex; align-items:center; gap:10px; margin-top:8px; }
-.lv-bar{ position: relative; flex:1 1 auto; height: 9px; border-radius:999px; background: oklch(0.885 0.014 150); overflow:hidden; }
-.lv-bar .fill{ position:absolute; left:0; top:0; bottom:0; width:0; border-radius:999px; transition: width 1.2s cubic-bezier(.16,1,.3,1); }
-.lv-bar .cota-mark{ position:absolute; top:-3px; bottom:-3px; width:2px; background: var(--ink-2); border-radius:2px; right:0; opacity:0.55; }
-.fill.normal{ background: linear-gradient(90deg, var(--moss), var(--moss-deep)); }
-.fill.observa{ background: linear-gradient(90deg, var(--teal-soft), var(--teal)); }
-.fill.atencao{ background: linear-gradient(90deg, oklch(0.78 0.12 82), var(--warn-deep)); }
-.fill.alerta{ background: linear-gradient(90deg, oklch(0.68 0.15 50), var(--terra-deep)); }
-.fill.inund{ background: linear-gradient(90deg, oklch(0.66 0.16 42), var(--alert)); }
-.lv-meta{ grid-column: 1 / -1; display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:7px; }
-.lv-trend{ font-size: 0.78rem; font-weight:600; display:inline-flex; align-items:center; gap:6px; }
-.lv-trend .arw{ font-size:0.8rem; }
-.lv-trend.up{ color: var(--terra-deep); }
-.lv-trend.calm{ color: var(--moss-deep); }
-.lv-eta{ font-size: 0.74rem; color: var(--muted); }
 .lv-status{ font-size:0.68rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:2px 8px; border-radius:999px; }
 .st-normal{ background: oklch(0.64 0.11 132 / 0.15); color: var(--moss-deep); }
 .st-observa{ background: oklch(0.615 0.088 208 / 0.15); color: var(--teal-deep); }
@@ -281,14 +288,22 @@ footer{ margin-top: 22px; padding: 8px 4px 0; font-size: 0.72rem; color: var(--f
 /* Tooltip */
 .tip{
   position: fixed; z-index: 20; pointer-events:none;
-  background: var(--pine-deep); color: oklch(0.96 0.02 150);
+  /* cores fixas: --pine-deep inverte no modo tempestade e sumiria o texto */
+  background: oklch(0.26 0.045 238 / 0.97); color: oklch(0.94 0.02 210);
   padding: 8px 10px; border-radius: 9px; font-size: 0.74rem; line-height:1.35;
   box-shadow: var(--sh-2); max-width: 210px; opacity:0; transform: translateY(3px);
   transition: opacity .14s ease-out, transform .14s ease-out;
 }
 .tip.on{ opacity:1; transform: translateY(0); }
-.tip b{ color: oklch(0.99 0.01 150); }
-.tip .kv{ color: oklch(0.86 0.04 150); }
+.tip b{ color: oklch(0.99 0.015 200); }
+.tip .kv{ color: oklch(0.84 0.045 210); }
+
+/* Marcador de hora / hover nos graficos */
+.now-line{ stroke: var(--alert); stroke-width:1.1; stroke-dasharray:3 3; }
+.now-tag{ font-size:7.5px; font-weight:700; fill: var(--alert); font-family: var(--font-sans); letter-spacing:0.02em; }
+.hover-band{ fill: var(--ink); opacity:0.10; }
+.hover-line{ stroke: var(--ink-2); stroke-width:1; opacity:0.5; }
+.chart-hit{ cursor: crosshair; }
 
 /* Reveal por entrada */
 .reveal{ opacity:0; transform: translateY(10px); transition: opacity .7s ease-out, transform .7s cubic-bezier(.16,1,.3,1); }
@@ -329,6 +344,7 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
 
 @media (prefers-reduced-motion: reduce){
   *{ animation: none !important; }
+  .realiza-logos .rl{ transition:none; }
   .reveal{ opacity:1; transform:none; transition:none; }
   .pano-drop{ display:none; }
   .pano-halo{ transform: scale(1.35); opacity:.55; }
@@ -435,23 +451,32 @@ body.storm .topo-bg{ display:none; }
 body.storm #storm{ display:block; }
 body.storm .panel{ background: var(--surface); -webkit-backdrop-filter: blur(11px) saturate(1.1); backdrop-filter: blur(11px) saturate(1.1); border-color: var(--line); box-shadow: 0 2px 34px oklch(0.10 0.05 250 / 0.55); }
 body.storm .hero, body.storm .risk, body.storm .fc-next, body.storm .verdict, body.storm .confl{ background: var(--surface); }
-body.storm .lv.lead, body.storm .gauge.lead{ background: var(--surface-2); }
+body.storm .gauge.lead{ background: var(--surface-2); }
 body.storm .basin-pano{ background: linear-gradient(180deg, oklch(0.31 0.05 235), oklch(0.19 0.04 245)); }
 body.storm .sbar .track{ background: oklch(0.85 0.05 235 / 0.16); }
-body.storm .lv-bar{ background: oklch(0.85 0.05 235 / 0.16); }
+/* Logos ganham tratamento de modo escuro: inverte a luminancia, preserva o matiz da marca */
+body.storm .realiza-logos img{ filter: invert(1) hue-rotate(180deg); }
 
 /* ===== Rede / confiabilidade das reguas ===== */
-.net-banner{ margin: 14px 0 2px; padding: 12px 15px; border-radius: var(--r); font-size: 0.86rem; line-height:1.5; color: var(--ink-2); background: oklch(0.615 0.088 208 / 0.09); border:1px solid oklch(0.47 0.082 212 / 0.24); }
-.net-banner b{ color: var(--pine-deep); font-weight:700; }
-.net-banner.warn{ color: var(--warn-deep); background: oklch(0.72 0.135 78 / 0.12); border-color: oklch(0.72 0.135 78 / 0.35); }
-body.storm .net-banner{ color: var(--ink); background: oklch(0.615 0.088 208 / 0.16); border-color: oklch(0.72 0.06 210 / 0.35); }
-body.storm .net-banner b{ color: var(--ink); }
+.netcard{ margin: 14px 0 2px; padding: 12px 15px; border-radius: var(--r); background: oklch(0.615 0.088 208 / 0.09); border:1px solid oklch(0.47 0.082 212 / 0.24); }
+.netcard.warn{ background: oklch(0.72 0.135 78 / 0.12); border-color: oklch(0.72 0.135 78 / 0.35); }
+.nc-top{ display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 26px; }
+.nc-ttl{ flex:1 1 100%; font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.09em; color:var(--muted); }
+.nc-st{ font-size:0.66rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; }
+.nc-st b{ display:block; margin-top:2px; font-family:var(--font-display); font-size:1.35rem; font-weight:600; line-height:1; color:var(--pine-deep); letter-spacing:0; text-transform:none; }
+.nc-st b small{ font-size:0.7rem; color:var(--ink-2); font-weight:600; }
+.nc-tags{ display:flex; flex-wrap:wrap; gap:5px 8px; margin-top:11px; padding-top:10px; border-top:1px solid var(--line); }
+.nc-tag{ font-size:0.7rem; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; }
+.nc-tag b{ color:var(--pine-deep); font-weight:600; }
+.nc-tag.ok b{ color:var(--moss-deep); }
+.nc-tag.chk{ background: oklch(0.72 0.135 78 / 0.13); border-color: oklch(0.72 0.135 78 / 0.32); } .nc-tag.chk b{ color:var(--warn-deep); }
+.nc-tag.off{ color:var(--muted); }
+.nc-note{ margin:9px 2px 0; font-size:0.72rem; line-height:1.45; color:var(--muted); }
+body.storm .netcard{ background: oklch(0.615 0.088 208 / 0.16); border-color: oklch(0.72 0.06 210 / 0.35); }
+body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 .chk{ font-size:0.6rem; color: var(--warn-deep); font-weight:700; text-transform:uppercase; letter-spacing:0.03em; }
 .gauge.check{ border-style: dashed; }
-.maint-note{ font-size: 0.8rem; color: var(--muted); line-height:1.5; padding: 2px 2px; }
-.maint-note b{ color: var(--ink-2); font-weight:600; }
 .basin-empty{ font-size:0.86rem; color: var(--muted); margin: 4px 2px; }
-.basin-maint{ font-size:0.72rem; color: var(--faint); margin: 8px 2px 0; }
 .sbar .track .f.atencao{ background: linear-gradient(90deg, oklch(0.78 0.12 82), var(--warn-deep)); }
 .sbar .track .f.alerta,.sbar .track .f.inund{ background: linear-gradient(90deg, oklch(0.68 0.15 50), var(--alert)); }
 .sbar .track .f.observa{ background: linear-gradient(90deg, var(--teal-soft), var(--teal)); }
@@ -464,6 +489,19 @@ body.storm .net-banner b{ color: var(--ink); }
 <canvas id="storm" aria-hidden="true"></canvas>
 
 <div class="wrap">
+  <div class="realiza">
+    <span class="realiza-tag">Realização</span>
+    <span class="realiza-rule" aria-hidden="true"></span>
+    <div class="realiza-logos">
+      <a class="rl rl-bea" href="https://bitcoineaqui.com.br" target="_blank" rel="noopener" title="Bitcoin é Aqui! Rolante">
+        <img src="logo-bitcoineaqui.png" width="152" height="210" alt="Bitcoin é Aqui! Rolante" loading="eager" decoding="async">
+      </a>
+      <span class="realiza-sep" aria-hidden="true"></span>
+      <a class="rl rl-acisa" href="https://acisarolante.com" target="_blank" rel="noopener" title="ACISA Rolante e Riozinho">
+        <img src="logo-acisa.png" width="560" height="134" alt="ACISA, Associação do Comércio, Indústria, Serviços e Agropecuária de Rolante e Riozinho" loading="eager" decoding="async">
+      </a>
+    </div>
+  </div>
   <header class="site-head">
     <div class="brand">
       <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
@@ -483,7 +521,7 @@ body.storm .net-banner b{ color: var(--ink); }
     </div>
   </header>
 
-  <div class="net-banner" id="net-banner" role="status">Verificando a rede de estações…</div>
+  <div class="netcard" id="net-card" role="status"><div class="nc-top"><div class="nc-ttl">Rede de estações</div></div>Verificando a rede…</div>
 
   <main>
     <!-- RISCO -->
@@ -515,7 +553,6 @@ body.storm .net-banner b{ color: var(--ink); }
         <span class="hint">últimas 96 h</span>
       </div>
       <div class="gauges" id="gauges"></div>
-      <div class="lv-list" id="lv-list" style="margin-top:12px"></div>
     </section>
 
     <!-- PANORAMA POR BACIA -->
@@ -540,12 +577,13 @@ body.storm .net-banner b{ color: var(--ink); }
         <div class="chart-legend" id="rainobs-legend"></div>
       </div>
       <div class="chart-block">
-        <div class="chart-title"><h3>Chuva prevista por hora</h3><span class="u">mm/h · próximas 48 h</span></div>
-        <div class="chart-wrap"><svg id="chart-rain" viewBox="0 0 360 172" role="img" aria-label="Chuva prevista por hora para Rolante, próximas 48 horas."></svg></div>
+        <div class="chart-title"><h3>Chuva prevista por hora</h3><span class="u">mm/h · 3 h atrás &rarr; próximas 48 h</span></div>
+        <div class="chart-wrap"><svg id="chart-rain" viewBox="0 0 360 172" role="img" aria-label="Chuva prevista por hora para Rolante, das últimas 3 horas às próximas 48 horas."></svg></div>
         <div class="chart-legend">
           <span class="cl"><span class="ln" style="background:var(--teal)"></span> fraca</span>
           <span class="cl"><span class="ln" style="background:var(--terra-deep)"></span> moderada</span>
           <span class="cl"><span class="ln" style="background:var(--alert)"></span> forte (&ge; 8 mm/h)</span>
+          <span class="cl" style="color:var(--muted)">passe o mouse para ver a hora · linha tracejada = agora; barras esmaecidas já passaram</span>
         </div>
       </div>
       <div class="chart-block">
@@ -587,7 +625,6 @@ body.storm .net-banner b{ color: var(--ink); }
     {id:"91661F2504450922",code:"EXRL-BV01",lat:-29.640,lng:-50.460,klass:"serra",alt:470,rio:"Boa Vista",bacia:"rolante"},
     {id:"726A95A4D3247CB4",code:"EXFP-CP01",lat:-29.660,lng:-50.625,klass:"serra",alt:430,rio:"Corticeiras",bacia:"rolante"},
     {id:"48B1162D47EC0FE6",code:"RSRZ-CH01",lat:-29.565,lng:-50.420,klass:"local",alt:130,rio:"Rio Chuvisca",bacia:"rolante",cotaAlerta:1.5},
-    {id:"AAA7CCD686C44D8E",code:"RSRL-CE02",lat:-29.620,lng:-50.550,klass:"local",alt:95,rio:"Rio Rolante",bacia:"rolante"},
     {id:"80500E0214FFDAF4",code:"RSRL-CE01",lat:-29.650,lng:-50.575,klass:"local",alt:90,rio:"Rio Rolante",bacia:"rolante"},
     {id:"2CAED8D9CB62CEB5",code:"RSRL-BV01",lat:-29.640,lng:-50.560,klass:"local",alt:85,rio:"Boa Vista (baixo)",bacia:"rolante"},
     {id:"CF98FCFA7E9EE7C1",code:"RSRL-AR01",lat:-29.640,lng:-50.530,klass:"local",alt:78,rio:"Rio Areia",bacia:"areia"},
@@ -597,12 +634,13 @@ body.storm .net-banner b{ color: var(--ink); }
   ];
   const REGBY={}; REG.forEach(r=>REGBY[r.id]=r);
   /* Confianca vale SO para altura de rio. Quem mede nivel sao as reguas RSRL:
-     GLLS e BE01 sao as leituras validadas; CE02 e AR01 estao em conferencia
-     (aparecem no painel, nao comandam o risco). Todas as demais sao estacoes
-     abertas de terceiros das quais so coletamos: medem CHUVA e entram normal
-     na analise. Capacidade (chuva/nivel) vem do dado, nao de lista fixa. */
+     GLLS e BE01 sao as leituras validadas; AR01 esta em conferencia
+     (aparece no painel, nao comanda o risco). CE02 esta fora: regua com dado
+     nao confiavel, removida do registro ate o conserto. Todas as demais sao
+     estacoes abertas de terceiros das quais so coletamos: medem CHUVA e entram
+     normal na analise. Capacidade (chuva/nivel) vem do dado, nao de lista fixa. */
   const LEVEL_TRUST=new Set(["RSRL-GLLS","RSRL-BE01"]);
-  const LEVEL_CHECK=new Set(["RSRL-CE02","RSRL-AR01"]);
+  const LEVEL_CHECK=new Set(["RSRL-AR01"]);
   function statusRel(s){
     if(!s||s.nowLevel==null) return {k:"normal",label:"sem sinal"};
     const c=s.reg.cotaAlerta;
@@ -762,7 +800,10 @@ body.storm .net-banner b{ color: var(--ink); }
       const days=d.daily.time.map((t,k)=>({date:t,mm:d.daily.precipitation_sum[k],prob:d.daily.precipitation_probability_max[k]}));
       let peakDay=null; days.slice(0,6).forEach(x=>{ if(!peakDay||x.mm>peakDay.mm) peakDay=x; });
       const nowMm=hp[startIdx]||0;
-      const hourly={ t:ht.slice(startIdx,startIdx+48), p:hp.slice(startIdx,startIdx+48) };
+      /* o grafico horario leva 3 h de cauda passada: sem isso a linha do
+         "agora" cai colada no eixo, ja que a serie comeca na hora corrente. */
+      const pastIdx=Math.max(0,startIdx-3);
+      const hourly={ t:ht.slice(pastIdx,startIdx+48), p:hp.slice(pastIdx,startIdx+48) };
       FC={ event:ev, next24, next72, days, peakDay, nowMm, hourly };
     }catch(e){ FC=null; }
   }
@@ -789,17 +830,26 @@ body.storm .net-banner b{ color: var(--ink); }
     RISK={ level, cur, fut, drivenBy, raining, maxFrac, maxTrend, worst, nowcast, futWhen, obs12, obs24, obsNow };
   }
 
-  function renderNetBanner(){
-    const el=$("#net-banner"); if(!el) return;
-    const chk=NET.check.map(s=>s.reg.code).join(" e ");
-    const tr=NET.trusted.map(s=>s.reg.code).join(", ");
-    let t='<b>Rede ativa:</b> '+NET.live+' de '+NET.total+' estações enviando dados agora — <b>'+NET.rain+
-          '</b> medindo chuva (todas usadas na análise) e <b>'+NET.gauges.length+'</b> medindo nível de rio.';
-    if(chk) t+=' As réguas <b>'+chk+'</b> estão com a leitura de nível em conferência: aparecem no painel, mas não comandam o risco.';
-    t+= tr? ' Nível validado por <b>'+tr+'</b>.'
-          : ' Nenhuma régua validada com sinal agora — o risco vai pela <b>chuva medida</b> e pela previsão.';
-    if(NET.offline.length) t+=' '+NET.offline.length+(NET.offline.length===1?' estação sem sinal':' estações sem sinal')+' nas últimas 4 h.';
-    el.innerHTML=t; el.className='net-banner'+((chk||!tr)?' warn':'');
+  function renderNetCard(){
+    const el=$("#net-card"); if(!el) return;
+    const shortCode=s=>s.reg.code.replace("RSRL-","");
+    const tr=NET.trusted.map(shortCode).join(", ");
+    const chk=NET.check.map(shortCode).join(", ");
+    const off=NET.offline.map(s=>s.reg.code).join(", ");
+    const st=(k,v,u)=>'<div class="nc-st">'+k+'<b>'+v+(u?' <small>'+u+'</small>':'')+'</b></div>';
+    const tags=[];
+    tags.push(tr? '<span class="nc-tag ok">nível validado <b>'+tr+'</b></span>'
+                : '<span class="nc-tag chk">sem régua validada — risco vai pela <b>chuva medida</b></span>');
+    if(chk) tags.push('<span class="nc-tag chk">em conferência <b>'+chk+'</b> · fora do risco</span>');
+    if(off) tags.push('<span class="nc-tag off">sem sinal 4 h: <b>'+off+'</b></span>');
+    el.className='netcard'+((chk||!tr)?' warn':'');
+    el.innerHTML='<div class="nc-top"><div class="nc-ttl">Rede de estações</div>'+
+      st("ativas", NET.live, "de "+NET.total)+
+      st("medindo chuva", NET.rain, "na análise")+
+      st("réguas de nível", NET.gauges.length, NET.trusted.length+" validada"+(NET.trusted.length===1?"":"s"))+
+      st("sem sinal 4 h", NET.offline.length, "")+
+      '</div><div class="nc-tags">'+tags.join("")+'</div>'+
+      '<p class="nc-note">As estações de chuva são abertas, de terceiros — nós só coletamos os dados, e todas entram na análise. Só as réguas validadas comandam o risco.</p>';
   }
 
   /* ===== RENDER: risco ===== */
@@ -812,18 +862,20 @@ body.storm .net-banner b{ color: var(--ink); }
     $("#risk-when").textContent = R.drivenBy==="previsto"&&R.futWhen? ("motivado pela previsão · "+diaCurto(R.futWhen)) : "situação agora";
     const w=R.worst; let head="", drv="";
     const top=NET.rainSt[0];
-    const medida = R.obs12!=null
-      ? ("Chuva medida na rede: <b>"+fmt(R.obs12,1)+" mm</b> em 12 h e "+fmt(R.obs24,1)+" mm em 24 h (maior valor entre "+NET.rain+" estações"+(top?", "+top.reg.code:"")+"). ")
+    const medida = (R.obs12!=null&&top)
+      ? ("Maior acumulado da rede em <b>"+top.reg.code+"</b> ("+top.reg.rio+"). ")
       : "";
     const regua = w
-      ? ("Régua "+w.reg.code+": "+fmt(w.nowLevel,2)+" m"+(w.reg.cotaAlerta?(" de "+fmt(w.reg.cotaAlerta,1)+" m de cota"):"")+(w.trend>=1?(", subindo "+fmt(w.trend,1)+" cm/h"):"")+". ")
+      ? ("Régua "+w.reg.code+": "+(w.reg.cotaAlerta
+          ? (R.maxFrac>=1?"cota atingida":R.maxFrac>=0.9?"quase na cota":R.maxFrac>=0.7?"acima de 70% da cota":"nível normal")
+          : trendTxt(w))+". ")
       : "Sem régua validada com sinal agora. ";
     if(R.raining){
       head = "Chovendo agora"+(R.obsNow?(" (~"+fmt(R.obsNow,1)+" mm/h medidos)"):(FC&&FC.nowMm?(" (~"+fmt(FC.nowMm,1)+" mm/h pela previsão)"):""))+".";
-      drv = medida + (FC&&FC.next24>=5?("Ainda vêm ~<b>"+fmt(FC.next24,0)+" mm</b> em 24 h. "):"") + regua + "Limiar de enchente: 80 mm em 12 h.";
+      drv = medida + regua + "Limiar de enchente na bacia: 80 mm em 12 h.";
     } else {
       head="Sem chuva agora.";
-      if(FC&&FC.peakDay&&FC.peakDay.mm>=15){ head+=" Previsão aponta ~"+fmt(FC.peakDay.mm,0)+" mm em "+diaCurto(FC.peakDay.date)+" (prob. "+fmt(FC.peakDay.prob,0)+"%)."; drv=(R.level>=2?"<b>Fique atento</b>: ":"")+"Volume "+(FC.peakDay.mm>=80?"muito alto":FC.peakDay.mm>=40?"alto":"moderado")+" previsto"+(FC.next72>=40?(", ~"+fmt(FC.next72,0)+" mm em 3 dias. "):". "); }
+      if(FC&&FC.peakDay&&FC.peakDay.mm>=15){ head+=" Previsão aponta ~"+fmt(FC.peakDay.mm,0)+" mm em "+diaCurto(FC.peakDay.date)+" (prob. "+fmt(FC.peakDay.prob,0)+"%)."; drv=(R.level>=2?"<b>Fique atento</b>: ":"")+"Volume "+(FC.peakDay.mm>=80?"muito alto":FC.peakDay.mm>=40?"alto":"moderado")+" previsto. "; }
       else { head+=" Tempo firme nos próximos dias."; drv="Sem volume relevante na previsão. "; }
       drv += medida + regua;
     }
@@ -835,10 +887,8 @@ body.storm .net-banner b{ color: var(--ink); }
     else q.push(qk("Próxima chuva","sem","evento","nada à vista",false));
     if(w) q.push(qk("Nível "+w.reg.code, fmt(w.nowLevel,2),"m", (w.reg.cotaAlerta?("cota "+fmt(w.reg.cotaAlerta,1)+" m · "):"")+trendTxt(w), R.maxFrac>=0.7));
     else q.push(qk("Nível validado","--","","nenhuma régua validada com sinal",false));
-    q.push(qk("Rede ativa", String(NET.live), NET.live===1?"estação":"estações", NET.rain+" medindo chuva · "+NET.gauges.length+" com régua", false));
     $("#risk-quick").innerHTML=q.join("");
   }
-  function nivelBaixo(s){ return s&&s.lvMax!=null&&s.nowLevel!=null && s.nowLevel <= (s.lvMin+(s.lvMax-s.lvMin)*0.55); }
   function trendTxt(s){ if(!s||s.trend==null) return "sem tendência"; if(s.trend>=1) return "subindo "+fmt(s.trend,1)+" cm/h"; if(s.trend<=-1) return "baixando "+fmt(Math.abs(s.trend),1)+" cm/h"; return "estável"; }
   function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }
   function diaCurto(iso){ const d=new Date(iso.length===10?iso+"T12:00":iso); const t=new Date(); const dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(t.getFullYear(),t.getMonth(),t.getDate()))/86400000); if(dd===0) return "hoje"; if(dd===1) return "amanhã"; return DOW[d.getDay()]+" "+String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0"); }
@@ -851,7 +901,7 @@ body.storm .net-banner b{ color: var(--ink); }
     let tx;
     if(ev){ tx='<div class="ic">'+dropSvg()+'</div><div class="tx">Próxima chuva <b>'+diaCurto(ev.start)+', '+horaCurta(ev.start)+'</b>. Volume estimado do evento: <span class="big">'+fmt(ev.mm,0)+' mm</span>. '+
       (ev.mm>=80?'Volume de risco de enchente.':ev.mm>=40?'Volume alto, acompanhar de perto.':ev.mm>=15?'Volume moderado.':'Volume pequeno.')+
-      ' Nas próximas 24 h: ~'+fmt(FC.next24,0)+' mm; em 3 dias: ~'+fmt(FC.next72,0)+' mm.</div>'; }
+      ' Em 3 dias: ~'+fmt(FC.next72,0)+' mm.</div>'; }
     else tx='<div class="ic">'+dropSvg()+'</div><div class="tx">Sem chuva relevante prevista para os próximos dias. Em 3 dias: ~'+fmt(FC.next72,0)+' mm.</div>';
     $("#fc-next").innerHTML=tx;
     const mx=Math.max(10,Math.max.apply(null,FC.days.map(d=>d.mm)));
@@ -879,13 +929,6 @@ body.storm .net-banner b{ color: var(--ink); }
           '<div class="g-spark">'+sparkline(s.level)+'</div></div>';
       }).join("");
     }
-    const chk=NET.check.map(s=>s.reg.code+" ("+s.reg.rio+")").join(", ");
-    const off=NET.offline.map(s=>s.reg.code).join(", ");
-    const parts=[];
-    if(chk) parts.push('<b>Leitura de nível em conferência:</b> '+chk+' — os valores aparecem para acompanhamento, mas ficam fora do cálculo de risco enquanto a régua não é aferida.');
-    parts.push('<b>Chuva:</b> as demais estações da rede são abertas, de terceiros, e nós só coletamos os dados — as '+NET.rain+' que enviam pluviômetro entram na análise normalmente.');
-    if(off) parts.push('<b>Sem sinal nas últimas 4 h:</b> '+off+'.');
-    $("#lv-list").innerHTML='<div class="maint-note">'+parts.join(" ")+'</div>';
   }
   function sparkline(lv){ if(!lv) return ""; const W=150,Ht=34,pad=3,mn=Math.min.apply(null,lv),mx=Math.max.apply(null,lv),rng=(mx-mn)||1;
     const xs=i=>pad+i*(W-2*pad)/(lv.length-1),ys=v=>(Ht-pad)-(v-mn)/rng*(Ht-2*pad); const line=smoothPath(lv.map((v,i)=>[xs(i),ys(v)]));
@@ -903,11 +946,6 @@ body.storm .net-banner b{ color: var(--ink); }
         ? B.rainSt.map(s=>{ const v=s.rain24||0, f=clamp(v/mxR,0,1);
             return '<div class="sbar'+(v<0.2?' dry':'')+'"><div class="snm">'+s.reg.code+' <i>'+s.reg.rio+'</i></div><div class="track"><div class="f '+rainCls(v)+'" style="width:'+(f*100).toFixed(0)+'%"></div></div><div class="val">'+fmt(v,1)+' mm</div></div>'; }).join("")
         : '<p class="basin-empty">Nenhuma estação de chuva desta bacia com sinal agora.</p>';
-      const lvFrac=s=>s.reg.cotaAlerta? clamp(s.nowLevel/s.reg.cotaAlerta,0,1)
-                    : clamp((s.nowLevel-(s.lvMin||0))/(((s.lvMax||s.nowLevel)-(s.lvMin||0))||1),0.06,1);
-      const lvRows = B.levelSt.map(s=>{ const f=lvFrac(s), ss=statusRel(s), sub=s.levelCheck?'em conferência':(s.reg.cotaAlerta?s.reg.rio:'faixa 96 h');
-            return '<div class="sbar"><div class="snm">'+s.reg.code+' <i>'+sub+'</i></div><div class="track"><div class="f '+ss.k+'" style="width:'+(f*100).toFixed(0)+'%"></div></div><div class="val">'+fmt(s.nowLevel,2)+' m</div></div>'; }).join("");
-      const offList=B.offline.map(x=>x.reg.code).join(", ");
       return '<div class="basin"><div class="basin-head"><div class="nm">'+m.nome+'<small>'+m.sub+'</small></div><span class="basin-verd '+cls+'">'+stt.label+'</span></div>'+
         '<div class="basin-body">'+
         '<div class="basin-pano"><svg id="cut-'+key+'" viewBox="0 0 360 156" role="img" aria-label="Encosta da bacia do '+m.nome+' com as estações de chuva, onde chove agora e a régua de nível."></svg></div>'+
@@ -921,12 +959,9 @@ body.storm .net-banner b{ color: var(--ink); }
           '<div class="bn">Chovendo agora<b>'+B.rainingNow.length+' <small>de '+B.rainSt.length+(B.rainNowMax?(' · '+fmt(B.rainNowMax,1)+' mm/h'):(B.rainRecent.length?(' · '+B.rainRecent.length+' há pouco'):''))+'</small></b></div>'+
           '<div class="bn">Chuva 24 h medida<b>'+(B.rain24!=null?fmt(B.rain24,1):'-')+' <small>mm (máx.)</small></b></div>'+
           '<div class="bn">Chuva 12 h medida<b>'+(B.rain12!=null?fmt(B.rain12,1):'-')+' <small>mm</small></b></div>'+
-          '<div class="bn">Chuva prevista 24 h<b>'+(FC?fmt(FC.next24,0):'-')+' <small>mm</small></b></div>'+
           '<div class="bn">Régua<b>'+(g?fmt(g.nowLevel,2)+' <small>m ('+g.reg.code+')</small>':'-')+'</b></div>'+
         '</div>'+
         '<div class="sbars">'+rainRows+'</div>'+
-        (lvRows?('<p class="basin-cap" style="margin-top:10px">Nível dos rios da bacia</p><div class="sbars">'+lvRows+'</div>'):'')+
-        (offList?('<p class="basin-maint">Sem sinal nas últimas 4 h: '+offList+'</p>'):'')+
         '</div></div>';
     }).join("");
     ["rolante","areia"].forEach(k=> drawBasinCut($("#cut-"+k), BAS[k], k));
@@ -1019,6 +1054,18 @@ body.storm .net-banner b{ color: var(--ink); }
   }
 
   /* ===== RENDER: series ===== */
+  let TIPEL=null;
+  function tipShow(html,ev){
+    const t=TIPEL||(TIPEL=$("#tip")); if(!t) return;
+    t.innerHTML=html; t.classList.add("on");
+    const r=t.getBoundingClientRect();
+    let x=ev.clientX+14, y=ev.clientY-r.height-12;
+    if(x+r.width>window.innerWidth-8) x=ev.clientX-r.width-14;
+    if(y<8) y=ev.clientY+18;
+    t.style.left=Math.max(8,x)+"px"; t.style.top=y+"px";
+  }
+  function tipHide(){ const t=TIPEL||(TIPEL=$("#tip")); if(t) t.classList.remove("on"); }
+  function rainWord(mm){ return mm>=8?"forte":mm>=3?"moderada":mm>0?"fraca":"sem chuva"; }
   function chartRain(){
     const svg=$("#chart-rain"); const Wv=360,Hv=172,L=30,R=12,T=14,B=26;
     if(!FC||!FC.hourly||!FC.hourly.p.length){ svg.innerHTML='<text x="180" y="90" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--font-sans)">previsão indisponível</text>'; return; }
@@ -1027,9 +1074,41 @@ body.storm .net-banner b{ color: var(--ink); }
     const xs=i=>L+i*(Wv-L-R)/(n-1), ys=v=>(Hv-B)-v/yMax*(Hv-B-T), a=[];
     for(let g=0;g<=2;g++){ const val=yMax*g/2,yy=ys(val); a.push('<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)"/>'); a.push('<text x="'+(L-5)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+fmt(val,0)+'</text>'); }
     const bw=Math.max(1.4,(Wv-L-R)/n*0.66);
-    for(let i=0;i<n;i++){ if(pr[i]<=0) continue; const x=xs(i)-bw/2,y=ys(pr[i]),h=(Hv-B)-y,col=pr[i]>=8?"var(--alert)":pr[i]>=3?"var(--terra-deep)":"var(--teal)"; a.push('<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0.6,h).toFixed(1)+'" rx="1" fill="'+col+'"/>'); }
+    const nowMs=Date.now();
+    for(let i=0;i<n;i++){ if(pr[i]<=0) continue; const x=xs(i)-bw/2,y=ys(pr[i]),h=(Hv-B)-y,col=pr[i]>=8?"var(--alert)":pr[i]>=3?"var(--terra-deep)":"var(--teal)"; a.push('<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0.6,h).toFixed(1)+'" rx="1" fill="'+col+'"'+(new Date(tt[i]).getTime()<nowMs-3600000?' opacity="0.38"':'')+'/>'); }
     for(let i=0;i<n;i+=12){ const d=new Date(tt[i]); a.push('<text x="'+xs(i).toFixed(1)+'" y="'+(Hv-9)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="var(--font-sans)">'+(String(d.getDate()).padStart(2,"0")+"/"+String(d.getHours()).padStart(2,"0")+"h")+'</text>'); }
+    /* a serie leva 3 h de cauda passada (barras esmaecidas); a linha do
+       "agora" cai na fracao exata da hora corrente e anda durante ela. */
+    const nowX=xs(clamp((nowMs-new Date(tt[0]).getTime())/3600000,0,n-1));
+    const endSide=nowX>Wv-56;
+    a.push('<line class="now-line" x1="'+nowX.toFixed(1)+'" y1="'+T+'" x2="'+nowX.toFixed(1)+'" y2="'+(Hv-B)+'"/>');
+    a.push('<text class="now-tag" x="'+(nowX+(endSide?-3:3)).toFixed(1)+'" y="'+(T-4)+'" text-anchor="'+(endSide?"end":"start")+'">agora</text>');
+    a.push('<rect class="hover-band" x="0" y="'+T+'" width="0" height="'+(Hv-B-T)+'" rx="1" visibility="hidden"/>');
+    a.push('<line class="hover-line" x1="0" y1="'+T+'" x2="0" y2="'+(Hv-B)+'" visibility="hidden"/>');
+    a.push('<rect class="chart-hit" x="'+L+'" y="'+T+'" width="'+(Wv-L-R)+'" height="'+(Hv-B-T)+'" fill="transparent"/>');
     svg.innerHTML=a.join("");
+    hookRainHover(svg,{Wv:Wv,L:L,R:R,n:n,bw:bw,xs:xs,pr:pr,tt:tt});
+  }
+  function hookRainHover(svg,C){
+    const band=svg.querySelector(".hover-band"), line=svg.querySelector(".hover-line"), hit=svg.querySelector(".chart-hit");
+    if(!hit) return;
+    function at(ev){
+      const r=svg.getBoundingClientRect(); if(!r.width) return;
+      const vx=(ev.clientX-r.left)*C.Wv/r.width;
+      const i=Math.round(clamp((vx-C.L)/((C.Wv-C.L-C.R)/(C.n-1)),0,C.n-1));
+      const x=C.xs(i), mm=C.pr[i]||0, d=new Date(C.tt[i]);
+      band.setAttribute("x",(x-C.bw/2-0.8).toFixed(1)); band.setAttribute("width",(C.bw+1.6).toFixed(1));
+      line.setAttribute("x1",x.toFixed(1)); line.setAttribute("x2",x.toFixed(1));
+      band.setAttribute("visibility","visible"); line.setAttribute("visibility","visible");
+      tipShow('<b>'+diaCurto(C.tt[i])+' · '+String(d.getHours()).padStart(2,"0")+'h</b><br><span class="kv">'+fmt(mm,1)+' mm/h · '+rainWord(mm)+'</span>',ev);
+    }
+    function off(){ band.setAttribute("visibility","hidden"); line.setAttribute("visibility","hidden"); tipHide(); }
+    hit.addEventListener("mousemove",at);
+    hit.addEventListener("mouseleave",off);
+    hit.addEventListener("touchstart",function(e){ if(e.touches[0]) at(e.touches[0]); },{passive:true});
+    hit.addEventListener("touchmove",function(e){ if(e.touches[0]) at(e.touches[0]); },{passive:true});
+    hit.addEventListener("touchend",off);
+    hit.addEventListener("touchcancel",off);
   }
   function chartRainObs(){
     const svg=$("#chart-rainobs"), leg=$("#rainobs-legend"); if(!svg) return;
@@ -1047,8 +1126,9 @@ body.storm .net-banner b{ color: var(--ink); }
     if(peak<=0) a.push('<text x="180" y="86" text-anchor="middle" font-size="10.5" fill="var(--muted)" font-family="var(--font-sans)">sem chuva registrada nas últimas 36 h</text>');
     [0,9,18,27,35].forEach(i=>a.push('<text x="'+xs(i).toFixed(1)+'" y="'+(Hv-9)+'" text-anchor="middle" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+labels[off+i]+'</text>'));
     svg.innerHTML=a.join("");
-    if(leg) leg.innerHTML=sts.slice(0,6).map(s=>'<span class="cl"><span class="ln" style="background:var(--teal)"></span>'+s.reg.code+' <b>'+fmt(s.rain24,1)+' mm</b>/24 h</span>').join("")+
-      '<span class="cl" style="color:var(--muted)">barra = maior mm/h entre as '+sts.length+' estações</span>';
+    if(leg){ const t0=sts[0];
+      leg.innerHTML='<span class="cl"><span class="ln" style="background:var(--teal)"></span>barra = maior mm/h entre as '+sts.length+' estações</span>'+
+        (t0?'<span class="cl" style="color:var(--muted)">máx. 24 h: <b>'+t0.reg.code+'</b> '+fmt(t0.rain24,1)+' mm</span>':''); }
   }
   function chartLevel(){
     const svg=$("#chart-level"), Wv=360,Hv=182,L=28,R=14,T=14,B=26; const off=HMAX-CH;
@@ -1065,7 +1145,7 @@ body.storm .net-banner b{ color: var(--ink); }
       if(sObj.reg.cotaAlerta) p.push('<line x1="'+L+'" y1="'+ys(sObj.reg.cotaAlerta).toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+ys(sObj.reg.cotaAlerta).toFixed(1)+'" stroke="'+col+'" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"/>');
       p.push('<circle cx="'+xs(CH-1).toFixed(1)+'" cy="'+ys(sObj.nowLevel).toFixed(1)+'" r="2.6" fill="'+col+'"/>'); });
     svg.innerHTML=p.join(""); prepDraw(svg);
-    $("#level-legend").innerHTML=gs.map(x=>'<span class="cl"><span class="ln" style="background:'+x[1]+'"></span>'+x[0].reg.code+' <b>'+fmt(x[0].nowLevel,2)+' m</b>'+(x[0].reg.cotaAlerta?(' (cota '+fmt(x[0].reg.cotaAlerta,1)+')'):'')+(x[0].levelCheck?' <i style="font-style:normal;color:var(--warn-deep)">em conferência</i>':'')+'</span>').join("");
+    $("#level-legend").innerHTML=gs.map(x=>'<span class="cl"><span class="ln" style="background:'+x[1]+'"></span>'+x[0].reg.code+(x[0].levelCheck?' <i style="font-style:normal;color:var(--warn-deep)">(conferência)</i>':'')+'</span>').join("")+'<span class="cl" style="color:var(--muted)">tracejado = cota de alerta</span>';
   }
   function renderContext(){
     const cand=REG.map(r=>ST[r.code]).filter(s=>s&&s.live&&s.now.temp!=null);
@@ -1086,16 +1166,14 @@ body.storm .net-banner b{ color: var(--ink); }
   function prepDrawEl(svg){ svg.querySelectorAll(".chart-line").forEach(prepLine); }
   function prepLine(pl){ try{ const len=pl.getTotalLength(); pl.style.strokeDasharray=len; pl.style.strokeDashoffset=reduceMotion?0:len; }catch(e){} }
   function buildFooter(){
-    const rainList=NET?NET.rainSt.map(s=>s.reg.code).join(", "):"";
-    const gList=NET?NET.gauges.map(s=>s.reg.code+(s.levelCheck?" (em conferência)":"")).join(", "):"";
-    $("#foot").textContent="Chuva: medida pelas estações da rede"+(rainList?" ("+rainList+")":"")+" — estações abertas de terceiros das quais coletamos os dados — mais a previsão Open-Meteo (ECMWF/Best-Match) para Rolante. Nível de rio: réguas "+(gList||"sem sinal")+"; só GLLS e BE01 estão validadas e comandam o risco. Bacia do Areia: EXFP-AR01, EXRL-IN01, RSRL-GLLS, RSRL-BE01, RSRL-AR01; Rolante: demais. Coordenadas reais; altitude aproximada. Atualiza a cada 5 min. Atualizado "+gen+" (BRT).";
+    $("#foot").textContent="Chuva: estações abertas de terceiros das quais só coletamos os dados, mais a previsão Open-Meteo (ECMWF/Best-Match) para Rolante. Nível de rio: só RSRL-GLLS e RSRL-BE01 estão validadas e comandam o risco. Bacia do Areia: EXFP-AR01, EXRL-IN01, RSRL-GLLS, RSRL-BE01, RSRL-AR01; Rolante: demais. Coordenadas reais; altitude aproximada. Atualiza a cada 5 min. Atualizado "+gen+" (BRT).";
   }
 
   function renderAll(){
     buildContours();
     aggregateBasins(); NET=netSummary(); computeRisk();
     $("#clock").textContent=gen.split(" ")[1]+" BRT";
-    renderNetBanner(); renderRisk(); renderForecast(); renderGauges(); renderBasins(); chartRain(); chartRainObs(); chartLevel(); renderContext(); buildFooter(); applyStormMode();
+    renderNetCard(); renderRisk(); renderForecast(); renderGauges(); renderBasins(); chartRain(); chartRainObs(); chartLevel(); renderContext(); buildFooter(); applyStormMode();
     requestAnimationFrame(()=>document.body.classList.add("ready"));
   }
   function showEmpty(){ $("#risk-h").textContent="Sem dados das estações no momento."; $("#risk-drivers").textContent="Tentando novamente em instantes."; buildContours(); buildFooter(); document.body.classList.add("ready"); }
