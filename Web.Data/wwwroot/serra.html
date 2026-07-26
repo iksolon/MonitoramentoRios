@@ -303,6 +303,14 @@ body.ready .reveal{ opacity:1; transform:none; }
 @keyframes rl-flow{ from{ stroke-dashoffset: 28; } to{ stroke-dashoffset: 0; } }
 .pano-chev{ animation: rl-chev 2.6s ease-out infinite; }
 @keyframes rl-chev{ 0%,100%{ opacity:.25;} 45%{ opacity:.8; } }
+.pano-halo{ transform-box: fill-box; transform-origin: 50% 50%; animation: rl-halo 1.9s ease-out infinite; }
+.pano-halo.d2{ animation-delay: 0.95s; }
+@keyframes rl-halo{ 0%{ transform: scale(0.5); opacity:.9; } 100%{ transform: scale(2.5); opacity:0; } }
+.pano-mm{ animation: rl-breathe 2.4s ease-in-out infinite; }
+.pano-cloud{ animation: rl-breathe 3.4s ease-in-out infinite; }
+.pano-wetseg{ animation: rl-breathe 2.0s ease-in-out infinite; }
+@keyframes rl-breathe{ 0%,100%{ opacity:.6; } 50%{ opacity:1; } }
+.pano-wet circle{ animation: rl-breathe 2.0s ease-in-out infinite; }
 .pano-water{ transform: scaleY(0); transform-box: fill-box; transform-origin: 50% 100%; transition: transform 1.5s cubic-bezier(.16,1,.3,1); }
 body.ready .pano-water{ transform: scaleY(1); }
 .chart-line{ transition: stroke-dashoffset 1.5s ease-out; }
@@ -323,6 +331,8 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
   *{ animation: none !important; }
   .reveal{ opacity:1; transform:none; transition:none; }
   .pano-drop{ display:none; }
+  .pano-halo{ transform: scale(1.35); opacity:.55; }
+  .pano-mm,.pano-cloud,.pano-wetseg{ opacity:.9; }
   .pano-water{ transform: scaleY(1); transition:none; }
   .lv-bar .fill{ transition:none; }
   .chart-line{ transition:none; stroke-dashoffset:0 !important; }
@@ -607,6 +617,7 @@ body.storm .net-banner b{ color: var(--ink); }
   function mean(a){ const v=a.filter(x=>x!=null&&!isNaN(x)); return v.length? v.reduce((s,x)=>s+x,0)/v.length:0; }
   function sum(a){ return a.reduce((s,x)=>s+(x||0),0); }
   function num(v){ if(v==null) return null; const n=Number(v); return isFinite(n)?n:null; }
+  function tsOf(v){ if(!v) return null; const t=Date.parse(/[Zz+]|\d-\d\d:\d\d$/.test(v)?v:(v+"Z")); return isFinite(t)?t:null; }
   function lastNonNull(a){ for(let i=a.length-1;i>=0;i--) if(a[i]!=null) return a[i]; return null; }
   function fillGaps(a){ const b=a.slice(); let last=null; for(let i=0;i<b.length;i++){ if(b[i]==null)b[i]=last; else last=b[i]; } let nx=null; for(let i=b.length-1;i>=0;i--){ if(b[i]==null)b[i]=nx; else nx=b[i]; } return b; }
   function smoothPath(pts){ if(!pts.length) return ""; if(pts.length<3) return "M "+pts.map(p=>p[0]+" "+p[1]).join(" L "); let d="M "+pts[0][0]+" "+pts[0][1]; for(let i=0;i<pts.length-1;i++){ const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2; const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6; d+=" C "+c1x.toFixed(2)+" "+c1y.toFixed(2)+" "+c2x.toFixed(2)+" "+c2y.toFixed(2)+" "+p2[0].toFixed(2)+" "+p2[1].toFixed(2); } return d; }
@@ -658,7 +669,7 @@ body.storm .net-banner b{ color: var(--ink); }
         rain, level, tempH:tempR, humH:humR, pressH:prR,
         nowLevel, trend, rain12, rain24, rain72prior, sinceStart,
         lvMin: level?Math.min.apply(null,level):null, lvMax: level?Math.max.apply(null,level):null,
-        now:{ rainHora: rain?(lastNonNull(rain)||0):null, rain10:num(u.precipitacao10min), temp:num(u.temperaturaAr), hum:num(u.umidadeAr), press:num(u.pressaoAr), nivel:nowLevel } };
+        now:{ rainHora: rain?(lastNonNull(rain)||0):null, rain10:num(u.precipitacao10min), ts:tsOf(u.dataHoraDadosUTC), temp:num(u.temperaturaAr), hum:num(u.umidadeAr), press:num(u.pressaoAr), nivel:nowLevel } };
     });
     ST=out; ST.__anyData=anyData;
     const d=new Date(); gen=String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
@@ -666,6 +677,15 @@ body.storm .net-banner b{ color: var(--ink); }
 
   function pickGauge(arr){ let g=null; arr.forEach(s=>{ const f=s.reg.cotaAlerta?s.nowLevel/s.reg.cotaAlerta:0, gf=g?(g.reg.cotaAlerta?g.nowLevel/g.reg.cotaAlerta:0):-1; if(f>gf) g=s; }); return g; }
   function maxOf(arr,f){ return arr.length?Math.max.apply(null,arr.map(x=>f(x)||0)):null; }
+  /* chuva AGORA na estacao, em mm/h: pacote fresco (<=30 min) tem prioridade,
+     senao vale o bucket da hora corrente. Zero = nao esta chovendo ali. */
+  function rainNowOf(s){
+    if(!s||!s.hasRain||!s.live) return 0;
+    const fresh=s.now.ts!=null&&(Date.now()-s.now.ts)<=30*60*1000;
+    const r10=(fresh&&s.now.rain10!=null)?s.now.rain10*6:0;
+    const hr=s.rain?(s.rain[HMAX-1]||0):0;
+    return Math.max(r10,hr);
+  }
 
   function aggregateBasins(){
     BAS={};
@@ -677,7 +697,9 @@ body.storm .net-banner b{ color: var(--ink); }
                         .sort((a,c)=>(c.levelTrust?1:0)-(a.levelTrust?1:0));
       const trusted=levelSt.filter(s=>s.levelTrust);
       const gauge=pickGauge(trusted)||pickGauge(levelSt.filter(s=>!s.levelCheck))||null;
-      BAS[b.key]={ meta:b, all, live, rainSt, levelSt, trusted, gauge,
+      const rainingNow=rainSt.filter(s=>rainNowOf(s)>0.05).sort((a,c)=>rainNowOf(c)-rainNowOf(a));
+      BAS[b.key]={ meta:b, all, live, rainSt, levelSt, trusted, gauge, rainingNow,
+        rainNowMax:maxOf(rainSt,s=>rainNowOf(s)),
         rain12:maxOf(rainSt,s=>s.rain12), rain24:maxOf(rainSt,s=>s.rain24),
         rain24avg:rainSt.length?mean(rainSt.map(s=>s.rain24||0)):null,
         offline:all.filter(s=>!s.live), totalCount:all.length };
@@ -694,7 +716,7 @@ body.storm .net-banner b{ color: var(--ink); }
       trusted:gauges.filter(s=>s.levelTrust), check:gauges.filter(s=>s.levelCheck),
       offline:all.filter(s=>!s.live),
       rain12:maxOf(rainSt,s=>s.rain12), rain24:maxOf(rainSt,s=>s.rain24),
-      rainNow:maxOf(rainSt,s=>s.now.rainHora) };
+      rainNow:maxOf(rainSt,s=>rainNowOf(s)), rainingNow:rainSt.filter(s=>rainNowOf(s)>0.05) };
   }
   function chuvaStatus(mm){
     if(mm==null) return {k:"normal",label:"sem chuva medida"};
@@ -871,10 +893,14 @@ body.storm .net-banner b{ color: var(--ink); }
       const offList=B.offline.map(x=>x.reg.code).join(", ");
       return '<div class="basin"><div class="basin-head"><div class="nm">'+m.nome+'<small>'+m.sub+'</small></div><span class="basin-verd '+cls+'">'+stt.label+'</span></div>'+
         '<div class="basin-body">'+
-        '<div class="basin-pano"><svg id="cut-'+key+'" viewBox="0 0 360 156" role="img" aria-label="Encosta da bacia do '+m.nome+' com as estações de chuva e a régua de nível."></svg></div>'+
-        '<p class="basin-cap">Pingos = estações de chuva da bacia (tamanho conforme o acumulado de 24 h); losango = régua de nível. Barras abaixo: chuva medida por estação nas últimas 24 h.</p>'+
+        '<div class="basin-pano"><svg id="cut-'+key+'" viewBox="0 0 360 156" role="img" aria-label="Encosta da bacia do '+m.nome+' com as estações de chuva, onde chove agora e a régua de nível."></svg></div>'+
+        '<p class="basin-cap">'+(B.rainingNow.length
+            ? '<b style="color:var(--teal-deep)">Chovendo agora em '+B.rainingNow.map(s=>s.reg.code).join(", ")+'</b> — nuvem, pingos e pulso marcam o trecho do rio sob a chuva. '
+            : 'Nenhuma estação da bacia detectando chuva neste momento. ')+
+          'Pingos fixos = estações de chuva (tamanho conforme o acumulado de 24 h); losango = régua de nível. Barras abaixo: chuva medida por estação nas últimas 24 h.</p>'+
         '<div class="basin-nums">'+
-          '<div class="bn">Chuva 24 h medida<b>'+(B.rain24!=null?fmt(B.rain24,1):'-')+' <small>mm (máx. de '+B.rainSt.length+')</small></b></div>'+
+          '<div class="bn">Chovendo agora<b>'+B.rainingNow.length+' <small>de '+B.rainSt.length+(B.rainNowMax?(' · '+fmt(B.rainNowMax,1)+' mm/h'):'')+'</small></b></div>'+
+          '<div class="bn">Chuva 24 h medida<b>'+(B.rain24!=null?fmt(B.rain24,1):'-')+' <small>mm (máx.)</small></b></div>'+
           '<div class="bn">Chuva 12 h medida<b>'+(B.rain12!=null?fmt(B.rain12,1):'-')+' <small>mm</small></b></div>'+
           '<div class="bn">Chuva prevista 24 h<b>'+(FC?fmt(FC.next24,0):'-')+' <small>mm</small></b></div>'+
           '<div class="bn">Régua<b>'+(g?fmt(g.nowLevel,2)+' <small>m ('+g.reg.code+')</small>':'-')+'</b></div>'+
@@ -897,14 +923,35 @@ body.storm .net-banner b{ color: var(--ink); }
     const pts=sts.map((s,i)=>({s:s,x:xAt(i),y:altToY(s.reg.alt)}));
     const p=[],tg="tg_"+key,wg="wg_"+key;
     p.push('<defs><linearGradient id="'+tg+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.50 0.06 150)"/><stop offset="0.55" stop-color="oklch(0.40 0.055 156)"/><stop offset="1" stop-color="oklch(0.30 0.05 160)"/></linearGradient><linearGradient id="'+wg+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="oklch(0.66 0.10 205)"/><stop offset="1" stop-color="oklch(0.47 0.082 212)"/></linearGradient></defs>');
-    const nowMm=FC?FC.nowMm:0;
-    if(nowMm>=0.2){ let drops=[]; const nd=Math.min(40,Math.round(nowMm*4)); for(let k=0;k<nd;k++){ const dx=(xL+Math.random()*(xR-xL)).toFixed(1),top=(20+Math.random()*70),fall=(botGround-top-6),dur=(0.7+Math.random()*0.5).toFixed(2),delay=(-Math.random()*dur).toFixed(2); drops.push('<line class="pano-drop" x1="'+dx+'" y1="'+top.toFixed(1)+'" x2="'+dx+'" y2="'+(top+4).toFixed(1)+'" style="--fall:'+fall.toFixed(1)+'px; animation-duration:'+dur+'s; animation-delay:'+delay+'s"/>'); } p.push('<g>'+drops.join("")+'</g>'); }
+    // (a chuva desenhada aqui e a MEDIDA por estacao, localizada — ver bloco abaixo)
     const ridge=[[0,pts[0].y-3]].concat(pts.map(pp=>[pp.x,pp.y])).concat([[Wv,pts[n-1].y+5]]); const ridgeD=smoothPath(ridge);
     p.push('<path d="'+ridgeD+' L '+Wv+' '+botGround+' L 0 '+botGround+' Z" fill="url(#'+tg+')"/>');
     p.push('<path d="'+ridgeD+'" fill="none" stroke="oklch(0.60 0.09 135 / 0.7)" stroke-width="1.4"/>');
     const riverPts=pts.map(pp=>[pp.x,pp.y+4]); const riverD=smoothPath(riverPts);
     p.push('<path d="'+riverD+'" fill="none" stroke="oklch(0.47 0.082 212 / 0.3)" stroke-width="5" stroke-linecap="round"/>');
     p.push('<path class="pano-river" d="'+riverD+'" fill="none" stroke="var(--teal)" stroke-width="2.2" stroke-linecap="round"/>');
+    /* ===== chuva agora, por estacao: mostra em que trecho do rio esta chovendo ===== */
+    const wet=pts.map((pp,i)=>({pp,i,mm:rainNowOf(pp.s)})).filter(o=>o.mm>0.05);
+    wet.forEach(o=>{
+      const cx=o.pp.x, cy=o.pp.y, mm=o.mm, inten=clamp(mm/8,0,1);
+      // trecho do rio sob a chuva, realcado
+      const a=riverPts[Math.max(0,o.i-1)], c=riverPts[o.i], e=riverPts[Math.min(n-1,o.i+1)];
+      const m1=[(a[0]+c[0])/2,(a[1]+c[1])/2], m2=[(c[0]+e[0])/2,(c[1]+e[1])/2];
+      p.push('<path class="pano-wetseg" d="'+smoothPath([m1,c,m2])+'" fill="none" stroke="var(--teal-soft)" stroke-width="'+(3.2+inten*1.6).toFixed(1)+'" stroke-linecap="round" opacity="'+(0.5+inten*0.35).toFixed(2)+'"/>');
+      // nuvem + pingos so na faixa daquela estacao
+      const half=13+inten*9, top=Math.max(6,cy-30-inten*8), bot=cy+4;
+      p.push('<ellipse class="pano-cloud" cx="'+cx.toFixed(1)+'" cy="'+(top-3).toFixed(1)+'" rx="'+(half*0.95).toFixed(1)+'" ry="'+(3.6+inten*2.6).toFixed(1)+'" fill="oklch(0.52 0.035 240)" opacity="'+(0.42+inten*0.35).toFixed(2)+'"/>');
+      const nd=Math.round(clamp(5+mm*5,5,16));
+      for(let k=0;k<nd;k++){
+        const dx=(cx-half+Math.random()*half*2).toFixed(1), t=top+Math.random()*7, fall=bot-t,
+              dur=(0.5+Math.random()*0.35).toFixed(2), delay=(-Math.random()*dur).toFixed(2);
+        p.push('<line class="pano-drop" x1="'+dx+'" y1="'+t.toFixed(1)+'" x2="'+dx+'" y2="'+(t+3.4).toFixed(1)+'" style="--fall:'+fall.toFixed(1)+'px; animation-duration:'+dur+'s; animation-delay:'+delay+'s"/>');
+      }
+      // pulso no ponto da estacao + leitura em mm/h
+      p.push('<circle class="pano-halo" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="none" stroke="var(--teal-soft)" stroke-width="1.5"/>');
+      p.push('<circle class="pano-halo d2" cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.2" fill="none" stroke="var(--teal-soft)" stroke-width="1.1"/>');
+      p.push('<text class="pano-mm" x="'+cx.toFixed(1)+'" y="'+(cy+13).toFixed(1)+'" text-anchor="middle" font-size="6.4" font-weight="700" fill="oklch(0.96 0.06 205)" paint-order="stroke" stroke="oklch(0.26 0.045 238 / 0.8)" stroke-width="1.8" stroke-linejoin="round" font-family="var(--font-sans)">'+fmt(mm,1)+' mm/h</text>');
+    });
     const g=B.gauge||B.levelSt[0]||null,gCheck=!!(g&&g.levelCheck),gx=322,gw=13,gTop=112,gBed=146; let frac=0;
     if(g&&g.nowLevel!=null){ frac=g.reg.cotaAlerta?clamp(g.nowLevel/g.reg.cotaAlerta,0,1):clamp((g.nowLevel-(g.lvMin||0))/(((g.lvMax||g.nowLevel)-(g.lvMin||0))||1),0.08,1); }
     const wH=(gBed-gTop)*frac,last=riverPts[n-1];
@@ -934,13 +981,14 @@ body.storm .net-banner b{ color: var(--ink); }
       if(s.hasLevel){
         const col=s.levelCheck?"oklch(0.72 0.135 78)":"var(--teal-soft)";
         p.push('<g class="pano-pt" tabindex="0" role="img" aria-label="'+s.reg.code+' régua de nível"><circle cx="'+x+'" cy="'+y+'" r="8" fill="oklch(1 0 0 / 0)"/><path d="M '+x+' '+(pp.y-4).toFixed(1)+' L '+(pp.x+4).toFixed(1)+' '+y+' L '+x+' '+(pp.y+4).toFixed(1)+' L '+(pp.x-4).toFixed(1)+' '+y+' Z" fill="'+(s.levelCheck?"none":col)+'" stroke="'+col+'" stroke-width="1.5"'+(s.levelCheck?' stroke-dasharray="2 1.5"':'')+'/><title>'+s.reg.code+' ('+s.reg.rio+'): nível '+(s.nowLevel!=null?fmt(s.nowLevel,2)+' m':'sem leitura')+(s.levelCheck?' — em conferência':'')+'</title></g>'+
-          '<text x="'+x+'" y="'+(pp.y-8).toFixed(1)+'" text-anchor="middle" font-size="7" font-weight="700" fill="'+(s.levelCheck?"oklch(0.86 0.10 82)":"oklch(0.98 0.03 200)")+'" font-family="var(--font-sans)">'+short+'</text>');
+          '<text x="'+x+'" y="'+(pp.y-8).toFixed(1)+'" text-anchor="middle" font-size="7" font-weight="700" fill="'+(s.levelCheck?"oklch(0.90 0.12 82)":"oklch(0.98 0.03 200)")+'" paint-order="stroke" stroke="oklch(0.26 0.045 238 / 0.8)" stroke-width="1.8" stroke-linejoin="round" font-family="var(--font-sans)">'+short+'</text>');
         return;
       }
       if(s.hasRain){
-        const v=s.rain24||0, r=2.2+clamp(v/mxR,0,1)*3.4;
-        p.push('<g class="pano-pt" tabindex="0" role="img" aria-label="'+s.reg.code+' estação de chuva"><circle cx="'+x+'" cy="'+y+'" r="8" fill="oklch(1 0 0 / 0)"/><circle cx="'+x+'" cy="'+y+'" r="'+r.toFixed(1)+'" fill="var(--teal)" fill-opacity="0.85" stroke="oklch(0.98 0.02 200)" stroke-width="1.2"/><title>'+s.reg.code+' ('+s.reg.rio+'): '+fmt(v,1)+' mm em 24 h</title></g>'+
-          '<text x="'+x+'" y="'+(pp.y-7).toFixed(1)+'" text-anchor="middle" font-size="7" font-weight="700" fill="oklch(0.98 0.03 200)" font-family="var(--font-sans)">'+short+'</text>');
+        const v=s.rain24||0, mmNow=rainNowOf(s), r=(mmNow>0.05?3.0:2.2)+clamp(v/mxR,0,1)*3.4;
+        const fillCol=mmNow>0.05?"oklch(0.80 0.13 205)":"var(--teal)";
+        p.push('<g class="pano-pt'+(mmNow>0.05?' pano-wet':'')+'" tabindex="0" role="img" aria-label="'+s.reg.code+(mmNow>0.05?' chovendo agora':' estação de chuva')+'"><circle cx="'+x+'" cy="'+y+'" r="8" fill="oklch(1 0 0 / 0)"/><circle cx="'+x+'" cy="'+y+'" r="'+r.toFixed(1)+'" fill="'+fillCol+'" fill-opacity="'+(mmNow>0.05?"1":"0.85")+'" stroke="oklch(0.98 0.02 200)" stroke-width="'+(mmNow>0.05?"1.6":"1.2")+'"/><title>'+s.reg.code+' ('+s.reg.rio+'): '+(mmNow>0.05?('chovendo agora, '+fmt(mmNow,1)+' mm/h · '):'')+fmt(v,1)+' mm em 24 h</title></g>'+
+          '<text x="'+x+'" y="'+(pp.y-7).toFixed(1)+'" text-anchor="middle" font-size="7" font-weight="700" fill="'+(mmNow>0.05?"oklch(0.99 0.06 205)":"oklch(0.98 0.03 200)")+'" paint-order="stroke" stroke="oklch(0.26 0.045 238 / 0.8)" stroke-width="1.8" stroke-linejoin="round" font-family="var(--font-sans)">'+short+'</text>');
         return;
       }
       p.push('<g class="pano-pt" tabindex="0" role="img" aria-label="'+s.reg.code+' telemetria"><circle cx="'+x+'" cy="'+y+'" r="7" fill="oklch(1 0 0 / 0)"/><circle cx="'+x+'" cy="'+y+'" r="2.2" fill="oklch(0.92 0.02 150 / 0.55)"/><title>'+s.reg.code+': envia só temperatura/pressão</title></g>');
