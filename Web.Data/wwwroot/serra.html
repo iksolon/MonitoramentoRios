@@ -983,7 +983,6 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     const agora=sum(line.slice(0,12));
     return {ok:true, eta, etaAt, peak, peakAt, lim, limAt, agora, frac, rise, amp};
   }
-  function etaTxt(h){ return h==null?null:(h<=1?"menos de 1 h":h+" h"); }
 
   function renderNetCard(){
     const el=$("#net-card"); if(!el) return;
@@ -1030,27 +1029,32 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     q.push(qk("Chuva prevista 24 h", FC?fmt(FC.next24,0):"-","mm", (FC&&FC.next24>=20)?"volume relevante":"pela previsão", FC&&FC.next24>=20));
     if(FC&&FC.event) q.push(qk("Próxima chuva", diaCurto(FC.event.start), horaCurta(FC.event.start), "~"+fmt(FC.event.mm,0)+" mm no evento", FC.event.mm>=40));
     else q.push(qk("Próxima chuva","sem","evento","nada à vista",false));
-    if(w) q.push(qk("Nível "+w.reg.code, fmt(w.nowLevel,2),"m", (w.reg.cotaAlerta?("cota "+fmt(w.reg.cotaAlerta,1)+" m · "):"")+trendTxt(w), R.maxFrac>=0.7));
-    else q.push(qk("Nível validado","--","","nenhuma régua validada com sinal",false));
-    // primeiro card: quando a CIDADE entra em risco (chuva sobre a bacia)
+    // Enchente na cidade: veredito calmo em palavra, numeros no rodape do card.
+    // "improvavel" ate a chuva prevista realmente alcancar o limiar — banda de
+    // atencao muda o texto de apoio, nao o veredito, pra nao virar alarme falso.
     const E=cityFloodEta();
-    const gat=E.ok?("gatilho "+fmt(E.lim,0)+" mm/12 h"+(E.frac>=0.3?" (rio já em "+fmt(E.frac*100,0)+"% da cota)":"")):"";
+    const rioTxt=(E.ok&&E.frac>=0.3)?(" · rio em "+fmt(E.frac*100,0)+"% da cota"):"";
+    const pede=E.ok?(" · enchente pede ~"+fmt(E.lim,0)+" mm"):"";
+    const pico=E.ok?("pico "+fmt(E.peak,0)+" mm/12 h"+(E.peakAt?(" em "+quandoTxt(E.peakAt)):"")+pede+rioTxt):"";
     if(!E.ok)
-      q.unshift(qk("Risco de enchente","--","","sem chuva medida nem previsão para calcular",false));
+      q.unshift(qk("Enchente na cidade","--","","sem chuva medida nem previsão para calcular",false));
     else if(E.agora>=E.lim)
-      q.unshift(qk("Risco de enchente","agora","",fmt(E.agora,0)+" mm nas últimas 12 h · "+gat,true));
+      q.unshift(qk("Enchente na cidade","acontecendo","agora",fmt(E.agora,0)+" mm caíram em 12 h"+pede+rioTxt,true));
     else if(E.eta!=null)
-      q.unshift(qk("Risco de enchente","em "+etaTxt(E.eta),"","pico "+fmt(E.peak,0)+" mm/12 h · "+gat,true));
+      q.unshift(qk("Enchente na cidade","possível",quandoTxt(E.eta),pico,true));
     else if(E.etaAt!=null)
-      q.unshift(qk("Risco de enchente","atenção","em "+etaTxt(E.etaAt),"pico "+fmt(E.peak,0)+" mm/12 h, abaixo do "+gat,true));
+      q.unshift(qk("Enchente na cidade","improvável","",pico,false));
     else
-      q.unshift(qk("Risco de enchente","não","nas próximas 48 h","pico previsto "+fmt(E.peak,0)+" mm/12 h · "+gat,false));
+      q.unshift(qk("Enchente na cidade","improvável","nas próximas 48 h",pico,false));
     $("#risk-quick").innerHTML=q.join("");
   }
   function trendTxt(s){ if(!s||s.trend==null) return "sem tendência"; if(s.trend>=1) return "subindo "+fmt(s.trend,1)+" cm/h"; if(s.trend<=-1) return "baixando "+fmt(Math.abs(s.trend),1)+" cm/h"; return "estável"; }
   function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }
   function diaCurto(iso){ const d=new Date(iso.length===10?iso+"T12:00":iso); const t=new Date(); const dd=Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(t.getFullYear(),t.getMonth(),t.getDate()))/86400000); if(dd===0) return "hoje"; if(dd===1) return "amanhã"; return DOW[d.getDay()]+" "+String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0"); }
   function horaCurta(iso){ const d=new Date(iso); return String(d.getHours()).padStart(2,"0")+"h"; }
+  /* "amanhã 05h" em vez de "em 35 h": hora do relogio situa melhor e nao soa
+     como contagem regressiva de alarme. */
+  function quandoTxt(hAhead){ const iso=new Date(Date.now()+hAhead*3600000).toISOString(); return diaCurto(iso)+" "+horaCurta(iso); }
 
   /* ===== RENDER: previsao ===== */
   function renderForecast(){
