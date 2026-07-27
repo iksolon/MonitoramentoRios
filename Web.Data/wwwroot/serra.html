@@ -633,7 +633,6 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   const $=(s,r)=>(r||document).querySelector(s);
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const API = new URLSearchParams(location.search).get("api") || ((location.hostname==="localhost"||location.hostname==="127.0.0.1")?"https://rios.bitcoineaqui.com.br":"");  // local usa dados de producao; em prod usa mesma origem
-  const LAT=-29.6417, LNG=-50.5786;
   const HMAX=96, CH=36;                 // buckets carregados / mostrados no grafico
 
   /* Registro: coords reais (map.html), limiares reais (rsrl2.html), bacia confirmada pelo usuario.
@@ -806,12 +805,13 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   }
   function rainCls(mm){ return mm>=80?"alerta":mm>=40?"atencao":"observa"; }
 
-  /* ===== previsao Open-Meteo ===== */
+  /* ===== previsao (endpoint proprio, alimentado pelo WeatherOpenMeteo worker) ===== */
   async function loadForecast(){
     try{
-      const u="https://api.open-meteo.com/v1/forecast?latitude="+LAT+"&longitude="+LNG+"&hourly=precipitation&daily=precipitation_sum,precipitation_probability_max&timezone=America%2FSao_Paulo&forecast_days=7";
-      const d=await fetchJSON(u);
-      const ht=d.hourly.time, hp=d.hourly.precipitation;
+      const rows=await fetchJSON(API+"/weather/ext?hours=168");
+      if(!rows || !rows.length){ FC=null; return; }
+      const ht=rows.map(r=>r.forecastUTC.endsWith("Z")?r.forecastUTC:r.forecastUTC+"Z");
+      const hp=rows.map(r=>r.precipitacao||0);
       const now=Date.now();
       let startIdx=0; for(let i=0;i<ht.length;i++){ if(new Date(ht[i]).getTime()>=now-3600000){ startIdx=i; break; } }
       // proximo evento
@@ -820,7 +820,16 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       if(i<ht.length){ let tot=0,gap=0,endi=i; for(let j=i;j<ht.length;j++){ const p=hp[j]||0; if(p>=0.2){ tot+=p; endi=j; gap=0; } else { gap++; if(gap>=6) break; } } ev={start:ht[i],end:ht[endi],mm:tot}; }
       const next24=sum(hp.slice(startIdx,startIdx+24));
       const next72=sum(hp.slice(startIdx,startIdx+72));
-      const days=d.daily.time.map((t,k)=>({date:t,mm:d.daily.precipitation_sum[k],prob:d.daily.precipitation_probability_max[k]}));
+      // agrega por dia em horario local (BRT, UTC-3), igual ao "timezone=America/Sao_Paulo" da chamada antiga
+      const dayMap=new Map();
+      for(let k=0;k<ht.length;k++){
+        const dateKey=new Date(new Date(ht[k]).getTime()-3*3600000).toISOString().slice(0,10);
+        if(!dayMap.has(dateKey)) dayMap.set(dateKey,{mm:0,prob:0});
+        const e=dayMap.get(dateKey);
+        e.mm+=hp[k]||0;
+        e.prob=Math.max(e.prob, rows[k].precipitacaoProb||0);
+      }
+      const days=Array.from(dayMap,([date,v])=>({date, mm:v.mm, prob:v.prob}));
       let peakDay=null; days.slice(0,6).forEach(x=>{ if(!peakDay||x.mm>peakDay.mm) peakDay=x; });
       const nowMm=hp[startIdx]||0;
       /* o grafico horario leva 3 h de cauda passada: sem isso a linha do

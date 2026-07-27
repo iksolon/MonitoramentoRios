@@ -511,12 +511,13 @@ public class DB
                 .Take(hour)
                 ;
     }
-    public IEnumerable<DBModels.TBWeather> ObterWeatherEstendido(string regiao)
+    public IEnumerable<DBModels.TBWeather> ObterWeatherEstendido(string regiao, int hours = 96)
     {
         using var cnn = db.GetConnection();
-        var d = cnn.Query<DBModels.TBWeather>("SELECT * FROM TBWeather WHERE RegionCode=@regiao AND  ColetaUTC IN (SELECT MAX(ColetaUTC) FROM TBWeather) ORDER BY ForecastUTC ASC LIMIT 0,96", new
+        var d = cnn.Query<DBModels.TBWeather>("SELECT * FROM TBWeather WHERE RegionCode=@regiao AND  ColetaUTC IN (SELECT MAX(ColetaUTC) FROM TBWeather) ORDER BY ForecastUTC ASC LIMIT 0,@hours", new
         {
-            regiao
+            regiao,
+            hours
         });
         return d;
     }
