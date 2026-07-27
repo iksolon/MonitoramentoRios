@@ -141,6 +141,8 @@ body{
   .realiza{ justify-content: space-between; padding-top: 14px; }
   .realiza-rule{ display:none; }
   .realiza-logos{ gap: 13px; }
+  .realiza-logos .rl{ min-height:44px; display:inline-flex; align-items:center; }
+  .storm-btn{ min-height:44px; padding:8px 16px; }
 }
 
 /* Blocos de secao */
@@ -220,8 +222,6 @@ section{ margin-top: 18px; }
 .tag.seco{ background: var(--surface-2); color: var(--muted); }
 
 /* Panorama */
-.pano{ padding: 16px 14px 14px; overflow: hidden; }
-.pano .sec-head{ margin-left:2px; margin-right:2px; }
 .pano-read{ font-size: 0.76rem; color: var(--muted); margin: 0 2px 10px; }
 .pano-stage{ position: relative; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: linear-gradient(180deg, var(--sky-1), var(--sky-2) 62%, oklch(0.95 0.02 150) 100%); }
 .pano-stage svg{ display:block; width:100%; height:auto; }
@@ -292,13 +292,18 @@ body.storm{
 .chart-read b{ color:var(--pine-deep); font-weight:600; }
 
 /* Sparklines de contexto */
-.context{ padding: 14px; }
 .ctx-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .ctx{ padding: 11px 12px; border-radius: var(--r); background: var(--surface-2); border:1px solid var(--line); }
 .ctx .k{ font-size:0.70rem; color: var(--muted); letter-spacing:0.02em; }
 .ctx .v{ font-size:1.1rem; font-weight:600; color: var(--pine-deep); margin: 1px 0 5px; }
 .ctx .v small{ font-size:0.72rem; color: var(--muted); font-weight:600; }
 .ctx svg{ display:block; width:100%; height: 34px; }
+
+/* ===== Rede + contexto (linha superior) ===== */
+.top-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 2px; }
+.top-row .netcard{ margin:0; }
+.ctx-sub{ font-size:0.78rem; color:var(--muted); margin: 2px 2px 8px; }
+@media (max-width:620px){ .top-row{ grid-template-columns: 1fr; } }
 
 /* Nota previsao */
 .forecast-note{ display:flex; align-items:flex-start; gap:12px; padding: 14px 16px; }
@@ -332,7 +337,6 @@ footer{ margin-top: 22px; padding: 8px 4px 0; font-size: 0.72rem; color: var(--f
 .reveal{ opacity:0; transform: translateY(10px); transition: opacity .7s ease-out, transform .7s cubic-bezier(.16,1,.3,1); }
 body.ready .reveal{ opacity:1; transform:none; }
 .reveal.d1{ transition-delay:.05s; } .reveal.d2{ transition-delay:.12s; } .reveal.d3{ transition-delay:.19s; }
-.reveal.d4{ transition-delay:.26s; } .reveal.d5{ transition-delay:.33s; } .reveal.d6{ transition-delay:.40s; }
 
 /* Animacoes do panorama */
 .pano-drop{ stroke: var(--teal-deep); stroke-width: 1.6; stroke-linecap: round; opacity: 0.72; animation: rl-fall linear infinite; }
@@ -453,7 +457,10 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
 .gauge .g-spark{ margin-top:8px; } .gauge .g-spark svg{ width:100%; height:34px; display:block; }
 .gauge.lead{ background: linear-gradient(180deg, oklch(0.615 0.088 208 / 0.06), var(--surface)); border-color: oklch(0.47 0.082 212 / 0.28); }
 
-@media (max-width:520px){ .gauges{ grid-template-columns:1fr; } .fc-days{ grid-template-columns: repeat(7, 1fr); gap:3px; } .fc-d{ padding:7px 2px 6px; } .fc-d .b, .fc-bar .b{ width:10px; } .sbar{ grid-template-columns: 78px 1fr auto; } }
+@media (max-width:520px){ .gauges{ grid-template-columns:1fr; } .fc-days{ grid-template-columns: repeat(7, 1fr); gap:3px; } .fc-d{ padding:7px 2px 6px; } .fc-d .b, .fc-bar .b{ width:10px; }
+  .sbar{ grid-template-columns: 1fr auto; row-gap:4px; }
+  .sbar .snm{ grid-column: 1 / -1; white-space:normal; overflow:visible; text-overflow:unset; }
+}
 
 /* ===== Modo tempestade ===== */
 #storm{ position:fixed; inset:0; z-index:0; display:none; pointer-events:none; }
@@ -544,7 +551,14 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     </div>
   </header>
 
-  <div class="netcard" id="net-card" role="status"><div class="nc-top"><div class="nc-ttl">Rede de estações</div></div>Verificando a rede…</div>
+  <div class="top-row">
+    <div class="netcard" id="net-card" role="status"><div class="nc-top"><div class="nc-ttl">Rede de estações</div></div>Verificando a rede…</div>
+    <div class="netcard" id="ctx-card" role="status">
+      <div class="nc-top"><div class="nc-ttl">Contexto atmosférico</div></div>
+      <div class="ctx-sub" id="ctx-h">Ar na estação de referência</div>
+      <div class="ctx-grid" id="ctx-grid"></div>
+    </div>
+  </div>
 
   <main>
     <!-- RISCO -->
@@ -558,47 +572,17 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       <div class="risk-quick" id="risk-quick"></div>
     </section>
 
-    <!-- PREVISAO -->
+    <!-- CHUVA: PREVISAO + MEDIDA -->
     <section class="panel series reveal d2" aria-labelledby="fc-h" id="fc-sec">
       <div class="sec-head">
-        <div><div class="eyebrow">Previsão de chuva</div><h2 id="fc-h">Quanto de chuva vem</h2></div>
-        <span class="hint">Open-Meteo · Rolante</span>
+        <div><div class="eyebrow">Chuva</div><h2 id="fc-h">Chuva: previsão e histórico</h2></div>
+        <span class="hint">Open-Meteo + rede de estações · Rolante</span>
       </div>
-      <div class="fc-next" id="fc-next"><div class="tx">Carregando previsão…</div></div>
-      <div class="fc-days" id="fc-days"></div>
-      <p class="fc-note" id="fc-note"></p>
-    </section>
-
-    <!-- RIOS -->
-    <section class="panel levels reveal d3" aria-labelledby="lv-h">
-      <div class="sec-head">
-        <div><div class="eyebrow">Réguas dos rios</div><h2 id="lv-h">Nível agora</h2></div>
-        <span class="hint">últimas 96 h</span>
-      </div>
-      <div class="gauges" id="gauges"></div>
-    </section>
-
-    <!-- PANORAMA POR BACIA -->
-    <section class="panel pano reveal d4" aria-labelledby="pano-h">
-      <div class="sec-head">
-        <div><div class="eyebrow">Chuva sobre cada rio</div><h2 id="pano-h">Panorama por bacia</h2></div>
-      </div>
-      <p class="pano-read" id="pano-read">Chuva medida pelas estações da rede sobre cada bacia, mais a régua de nível do rio.</p>
-      <div id="basins"></div>
-      <div class="confl">
-        <svg class="vi" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 C 12.5 6, 16 8.5, 16 12 a6 6 0 1 1 -12 0 C 4 8.5, 7.5 6, 10 2 Z" fill="var(--teal)" opacity="0.9"/></svg>
-        <p><b>Confluência:</b> o Rio Areia deságua no Rolante já no fim da cidade. O Areia sozinho alaga alguns pontos; o Rolante (que vem de Riozinho) alaga outros; quando os dois se juntam, o risco vai para os pontos a jusante, em direção a Taquara.</p>
-      </div>
-    </section>
-
-    <!-- SERIES -->
-    <section class="panel series reveal d5" aria-labelledby="sr-h">
-      <div class="sec-head"><div><div class="eyebrow">Últimas horas</div><h2 id="sr-h">Chuva hora a hora</h2></div></div>
       <div class="chart-block">
-        <div class="chart-title"><h3>Onde está chovendo</h3><span class="u">mm/h por estação · últimas 36 h</span></div>
-        <div class="chart-wrap"><svg id="chart-rainmap" role="img" aria-label="Mapa de calor da chuva medida por estação em cada hora, com a faixa de abrangência da rede."></svg></div>
-        <p class="chart-read" id="rainmap-read"></p>
-        <div class="chart-legend" id="rainmap-legend"></div>
+        <div class="chart-title"><h3>Previsão por dia</h3><span class="u">próximos 7 dias</span></div>
+        <div class="fc-next" id="fc-next"><div class="tx">Carregando previsão…</div></div>
+        <div class="fc-days" id="fc-days"></div>
+        <p class="fc-note" id="fc-note"></p>
       </div>
       <div class="chart-block">
         <div class="chart-title"><h3>Chuva prevista por hora</h3><span class="u">mm/h · 3 h atrás &rarr; próximas 48 h</span></div>
@@ -610,12 +594,32 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
           <span class="cl" style="color:var(--muted)">passe o mouse para ver a hora · linha tracejada = agora; barras esmaecidas já passaram</span>
         </div>
       </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Onde está chovendo</h3><span class="u">mm/h por estação · últimas 36 h</span></div>
+        <div class="chart-wrap"><svg id="chart-rainmap" role="img" aria-label="Mapa de calor da chuva medida por estação em cada hora, com a faixa de abrangência da rede."></svg></div>
+        <p class="chart-read" id="rainmap-read"></p>
+        <div class="chart-legend" id="rainmap-legend"></div>
+      </div>
     </section>
 
-    <!-- CONTEXTO -->
-    <section class="panel context reveal d6" aria-labelledby="ctx-h">
-      <div class="sec-head"><div><div class="eyebrow">Contexto atmosférico</div><h2 id="ctx-h">Ar na estação de referência</h2></div><span class="hint">36 h</span></div>
-      <div class="ctx-grid" id="ctx-grid"></div>
+    <!-- RIOS E BACIAS -->
+    <section class="panel levels reveal d3" aria-labelledby="lv-h">
+      <div class="sec-head">
+        <div><div class="eyebrow">Rios e bacias</div><h2 id="lv-h">Nível dos rios agora</h2></div>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Nível agora</h3><span class="u">réguas · últimas 96 h</span></div>
+        <div class="gauges" id="gauges"></div>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Panorama por bacia</h3><span class="u">chuva medida sobre cada bacia</span></div>
+        <p class="pano-read" id="pano-read">Chuva medida pelas estações da rede sobre cada bacia, mais a régua de nível do rio.</p>
+        <div id="basins"></div>
+        <div class="confl">
+          <svg class="vi" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 C 12.5 6, 16 8.5, 16 12 a6 6 0 1 1 -12 0 C 4 8.5, 7.5 6, 10 2 Z" fill="var(--teal)" opacity="0.9"/></svg>
+          <p><b>Confluência:</b> o Rio Areia deságua no Rolante já no fim da cidade. O Areia sozinho alaga alguns pontos; o Rolante (que vem de Riozinho) alaga outros; quando os dois se juntam, o risco vai para os pontos a jusante, em direção a Taquara.</p>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -851,24 +855,14 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 
   function renderNetCard(){
     const el=$("#net-card"); if(!el) return;
-    const shortCode=s=>s.reg.code.replace("RSRL-","");
-    const tr=NET.trusted.map(shortCode).join(", ");
-    const chk=NET.check.map(shortCode).join(", ");
-    const off=NET.offline.map(s=>s.reg.code).join(", ");
     const st=(k,v,u)=>'<div class="nc-st">'+k+'<b>'+v+(u?' <small>'+u+'</small>':'')+'</b></div>';
-    const tags=[];
-    tags.push(tr? '<span class="nc-tag ok">nível validado <b>'+tr+'</b></span>'
-                : '<span class="nc-tag chk">sem régua validada — risco vai pela <b>chuva medida</b></span>');
-    if(chk) tags.push('<span class="nc-tag chk">em conferência <b>'+chk+'</b> · fora do risco</span>');
-    if(off) tags.push('<span class="nc-tag off">sem sinal 4 h: <b>'+off+'</b></span>');
-    el.className='netcard'+((chk||!tr)?' warn':'');
+    el.className='netcard';
     el.innerHTML='<div class="nc-top"><div class="nc-ttl">Rede de estações</div>'+
       st("ativas", NET.live, "de "+NET.total)+
       st("medindo chuva", NET.rain, "na análise")+
       st("réguas de nível", NET.gauges.length, NET.trusted.length+" validada"+(NET.trusted.length===1?"":"s"))+
       st("sem sinal 4 h", NET.offline.length, "")+
-      '</div><div class="nc-tags">'+tags.join("")+'</div>'+
-      '<p class="nc-note">As estações de chuva são abertas, de terceiros — nós só coletamos os dados, e todas entram na análise. Só as réguas validadas comandam o risco.</p>';
+      '</div>';
   }
 
   /* ===== RENDER: risco ===== */
@@ -1215,7 +1209,14 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   function renderContext(){
     const cand=REG.map(r=>ST[r.code]).filter(s=>s&&s.live&&s.now.temp!=null);
     const full=cand.filter(s=>s.now.hum!=null&&s.now.press!=null);
-    const ref=full.find(s=>s.levelTrust)||full[0]||cand.find(s=>s.levelTrust)||cand[0]||null; const grid=$("#ctx-grid");
+    /* Preferimos a regua local RSRL-RB02 (dentro da cidade); na falta dela,
+       a estacao com dado completo mais proxima dela, nao a mais proxima na
+       lista REG (que tinha estacoes de serra, longe da cidade). */
+    const REFPT=REGBY["5BA69743261D364A"]; // RSRL-RB02
+    const dist2=s=>{ const dlat=s.reg.lat-REFPT.lat, dlng=s.reg.lng-REFPT.lng; return dlat*dlat+dlng*dlng; };
+    const nearest=arr=>arr.length?arr.slice().sort((a,c)=>dist2(a)-dist2(c))[0]:null;
+    const ref=full.find(s=>s.reg.code===REFPT.code)||nearest(full)||cand.find(s=>s.reg.code===REFPT.code)||nearest(cand)||null;
+    const grid=$("#ctx-grid");
     if(!ref){ $("#ctx-h").textContent="Ar (sem estação com sinal)"; grid.innerHTML='<p style="color:var(--muted);font-size:0.85rem;grid-column:1/-1">Nenhuma estação com sinal para o contexto atmosférico.</p>'; return; }
     $("#ctx-h").textContent="Ar em "+ref.reg.code;
     const off=HMAX-CH;
