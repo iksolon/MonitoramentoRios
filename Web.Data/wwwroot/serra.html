@@ -127,8 +127,8 @@ body{
   transition: opacity .3s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1);
 }
 .realiza-logos .rl img{ display:block; width:auto; }
-.rl-bea img{ height: calc(var(--rl-h) * 1.62); }
-.rl-acisa img{ height: calc(var(--rl-h) * 0.94); }
+.rl-bea img{ height: calc(var(--rl-h) * 2.11); }
+.rl-acisa img{ height: calc(var(--rl-h) * 1.22); }
 .realiza-sep{
   flex:0 0 auto; width:1px; height:30px;
   background: linear-gradient(180deg, transparent, var(--line-2) 22%, var(--line-2) 78%, transparent);
@@ -310,9 +310,6 @@ body.storm{
 .forecast-note .fi{ flex:0 0 auto; margin-top:1px; }
 .forecast-note .txt{ font-size: 0.86rem; color: var(--ink-2); }
 .forecast-note .txt b{ color: var(--pine-deep); font-weight:600; }
-
-footer{ margin-top: 22px; padding: 8px 4px 0; font-size: 0.72rem; color: var(--faint); line-height:1.5; }
-
 /* Tooltip */
 .tip{
   position: fixed; z-index: 20; pointer-events:none;
@@ -623,7 +620,6 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     </section>
   </main>
 
-  <footer id="foot"></footer>
 </div>
 
 <div class="tip" id="tip" role="status" aria-live="polite"></div>
@@ -655,6 +651,16 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     {id:"5BA69743261D364A",code:"RSRL-RB02",lat:-29.650,lng:-50.545,klass:"local",alt:44,rio:"Rolante (ponte)",bacia:"rolante"}
   ];
   const REGBY={}; REG.forEach(r=>REGBY[r.id]=r);
+  /* Referencia da cidade: ponte do Rolante (RSRL-RB02), centro urbano.
+     Distancia em km inteiro so para situar a estacao no mapa mental. */
+  const CIDADE={lat:-29.650,lng:-50.545};
+  function kmCidade(reg){
+    const dy=(reg.lat-CIDADE.lat)*111.32;
+    const dx=(reg.lng-CIDADE.lng)*111.32*Math.cos(CIDADE.lat*Math.PI/180);
+    return Math.round(Math.sqrt(dx*dx+dy*dy));
+  }
+  function codeTail(code){ return code.split("-")[1]||code; }
+  function kmTxt(reg){ const k=kmCidade(reg); return k<1?"no centro":k+" km da cidade"; }
   /* Confianca vale SO para altura de rio. Quem mede nivel sao as reguas RSRL:
      GLLS e BE01 sao as leituras validadas; AR01 esta em conferencia
      (aparece no painel, nao comanda o risco). CE02 esta fora: regua com dado
@@ -680,6 +686,48 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   function tsOf(v){ if(!v) return null; const t=Date.parse(/[Zz+]|\d-\d\d:\d\d$/.test(v)?v:(v+"Z")); return isFinite(t)?t:null; }
   function lastNonNull(a){ for(let i=a.length-1;i>=0;i--) if(a[i]!=null) return a[i]; return null; }
   function fillGaps(a){ const b=a.slice(); let last=null; for(let i=0;i<b.length;i++){ if(b[i]==null)b[i]=last; else last=b[i]; } let nx=null; for(let i=b.length-1;i>=0;i--){ if(b[i]==null)b[i]=nx; else nx=b[i]; } return b; }
+  /* ---- nivel: filtro de pico ----------------------------------------------
+     A regua manda leitura suja (bolha de ar, detrito, telemetria). Um unico
+     ponto fora da curva estourava min/max de 96 h e virava "subindo 38 cm/h".
+     Hampel: compara cada ponto com a mediana da vizinhanca; se desviar mais que
+     k*MAD (com piso absoluto, senao serie parada rejeita ruido normal), troca
+     pela mediana. Nao inventa dado onde nao ha (null continua null). */
+  function median(a){ const v=a.filter(x=>x!=null&&isFinite(x)).sort((x,y)=>x-y); if(!v.length) return null; const m=v.length>>1; return v.length%2?v[m]:(v[m-1]+v[m])/2; }
+  function despike(a,win,k,floor){
+    win=win||3; k=k||3; floor=floor==null?0.06:floor;
+    const out=a.slice();
+    for(let i=0;i<a.length;i++){
+      if(a[i]==null) continue;
+      const w=a.slice(Math.max(0,i-win),Math.min(a.length,i+win+1));
+      const med=median(w); if(med==null) continue;
+      const mad=median(w.filter(x=>x!=null).map(x=>Math.abs(x-med)));
+      const lim=Math.max(floor,k*1.4826*(mad||0));
+      if(Math.abs(a[i]-med)>lim) out[i]=med;
+    }
+    return out;
+  }
+  /* Theil-Sen: mediana das inclinacoes par a par. Resiste a ponto solto no fim
+     da serie, que e exatamente onde a diferenca simples (a-b)/3 explodia. */
+  function robustSlope(a){
+    const pts=[]; for(let i=0;i<a.length;i++) if(a[i]!=null) pts.push([i,a[i]]);
+    if(pts.length<3) return null;
+    const sl=[];
+    for(let i=0;i<pts.length;i++) for(let j=i+1;j<pts.length;j++) sl.push((pts[j][1]-pts[i][1])/(pts[j][0]-pts[i][0]));
+    return median(sl);
+  }
+  /* Media movel centrada: mata o ruido branco que a mediana nao pega
+     (regua com dispersao alta hora a hora, nao pico isolado). */
+  function rollMean(a,w){ return a.map((_,i)=>{ const s=a.slice(Math.max(0,i-w),Math.min(a.length,i+w+1)).filter(x=>x!=null); return s.length?s.reduce((x,y)=>x+y,0)/s.length:a[i]; }); }
+  /* Ruido tipico da regua: MAD das variacoes hora a hora, em m/h. */
+  function levelNoise(a){ const d=[]; for(let i=1;i<a.length;i++) if(a[i]!=null&&a[i-1]!=null) d.push(Math.abs(a[i]-a[i-1])); const m=median(d); return m==null?0:1.4826*m; }
+  /* Suavizacao adaptativa: regua limpa (BE01, ~1 cm/h) passa intacta;
+     regua suja (AR01, ~35 cm/h) leva janela larga. Sem isso o mesmo filtro
+     ou nao resolve o ruido de uma ou apaga o sinal real da outra. */
+  function smoothLevel(a){
+    const n=levelNoise(a);
+    const w = n<0.03?0 : n<0.08?1 : n<0.15?2 : n<0.25?3 : 4;
+    return { series: w?rollMean(a,w):a, noise:n, win:w };
+  }
   function smoothPath(pts){ if(!pts.length) return ""; if(pts.length<3) return "M "+pts.map(p=>p[0]+" "+p[1]).join(" L "); let d="M "+pts[0][0]+" "+pts[0][1]; for(let i=0;i<pts.length-1;i++){ const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2; const c1x=p1[0]+(p2[0]-p0[0])/6,c1y=p1[1]+(p2[1]-p0[1])/6,c2x=p2[0]-(p3[0]-p1[0])/6,c2y=p2[1]-(p3[1]-p1[1])/6; d+=" C "+c1x.toFixed(2)+" "+c1y.toFixed(2)+" "+c2x.toFixed(2)+" "+c2y.toFixed(2)+" "+p2[0].toFixed(2)+" "+p2[1].toFixed(2); } return d; }
   function hkLabel(hk){ const d=new Date(hk*3600*1000); return String(d.getHours()).padStart(2,"0")+"h"; }
   const DOW=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
@@ -715,9 +763,21 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       const hasRain=rainR.some(v=>v!=null)||num(u.precipitacao10min)!=null;
       const hasLevel=lvR.some(v=>v!=null);
       const rain=hasRain?rainR.map(v=>v==null?0:v):null;   // null = estacao nao mede chuva (nao vira 0 mm falso)
-      const level=hasLevel?fillGaps(lvR):null;
-      const nowLevel=hasLevel?(num(u.nivelRio)!=null?num(u.nivelRio):lastNonNull(level)):null;
-      let trend=null; if(level){ const a=level[HMAX-1],b=level[HMAX-4]; if(a!=null&&b!=null) trend=Math.round((a-b)/3*100*10)/10; }
+      // despike (pico isolado) + suavizacao adaptativa (ruido continuo).
+      // A serie limpa alimenta grafico, min/max de 96 h e tendencia.
+      const lvSm = hasLevel?smoothLevel(despike(fillGaps(lvR))):null;
+      const level = lvSm?lvSm.series:null;
+      // Leitura instantanea so entra em regua limpa e se coerente com a serie.
+      // Em regua ruidosa (win>0) o valor cru e uma amostra do ruido: usa a serie filtrada.
+      let nowLevel=null;
+      if(hasLevel){
+        const base=lastNonNull(level), inst=num(u.nivelRio);
+        nowLevel = (!lvSm.win && inst!=null && (base==null || Math.abs(inst-base)<=0.20)) ? inst : base;
+      }
+      // tendencia por Theil-Sen (m/h -> cm/h). Regua suja precisa de janela
+      // longa: em 6 h o ruido de 35 cm/h vira "subindo 38 cm/h" do nada.
+      let trend=null;
+      if(level){ const tw=lvSm.win?12:6; const sl=robustSlope(level.slice(Math.max(0,HMAX-tw))); if(sl!=null) trend=Math.round(sl*100*10)/10; }
       const rain12=rain?sum(rain.slice(HMAX-12)):null;
       const rain24=rain?sum(rain.slice(HMAX-24)):null;
       const rain72prior=rain?sum(rain.slice(Math.max(0,HMAX-84),HMAX-12)):null;
@@ -862,6 +922,69 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     RISK={ level, cur, fut, drivenBy, raining, maxFrac, maxTrend, worst, nowcast, futWhen, obs12, obs24, obsNow };
   }
 
+  /* ===== quanto tempo ate o risco de enchente NA CIDADE ==============
+     A pergunta e "quando a cidade entra em risco", nao "quando a regua X
+     bate a cota". Regua e pista, nao alvo.
+
+     Gatilho: chuva efetiva acumulada em janela movel de 12 h sobre a bacia
+     (mesmo limiar ja usado no motor de risco: 80 mm/12 h = enchente,
+     50 mm/12 h = atencao). A janela mistura o que ja foi MEDIDO pela rede
+     com o que vem PREVISTO, hora a hora, ate 48 h.
+
+     Dois ajustes, ambos vindos dos rios como pista:
+       - rio ja alto  : cada ponto percentual de cota ocupado desconta do
+                        limiar (rio cheio precisa de menos chuva para
+                        transbordar) — ate 50 % de desconto.
+       - rio subindo  : subida >=10 cm/h desconta mais 10 %.
+     Solo encharcado (chuva medida nas 24 h) amplifica a chuva prevista
+     ate 1,5x — mesma agua rende mais escoamento em solo saturado.       */
+  const ETA_H=48, LIM_CHEIA=80, LIM_ATEN=50;
+  /* chuva medida na rede, hora a hora: usa o maximo entre estacoes, que e o
+     nucleo do evento — e o que enche o rio, nao a media diluida da bacia. */
+  function netRainSeries(){
+    const sts=NET?NET.rainSt.filter(s=>Array.isArray(s.rain)):[];
+    if(!sts.length) return null;
+    const out=[]; for(let i=0;i<HMAX;i++){ let m=0; sts.forEach(s=>{ const v=s.rain[i]||0; if(v>m)m=v; }); out.push(m); }
+    return out;
+  }
+  function fcRainAt(hAhead){
+    if(!FC||!FC.hourly||!FC.hourly.t.length) return 0;
+    const now=Date.now(), t=FC.hourly.t, p=FC.hourly.p;
+    const target=now+hAhead*3600000;
+    let best=-1,bd=Infinity;
+    for(let i=0;i<t.length;i++){ const d=Math.abs(new Date(t[i]).getTime()-target); if(d<bd){bd=d;best=i;} }
+    return (best>=0&&bd<=5400000)?(p[best]||0):0;
+  }
+  function cityFloodEta(){
+    const obs=netRainSeries();
+    if(!obs&&!FC) return {ok:false};
+    // desconto no limiar pelo estado dos rios (so reguas validadas com cota)
+    let frac=0, rise=0;
+    (NET?NET.trusted:[]).forEach(s=>{
+      if(s.reg.cotaAlerta&&s.nowLevel!=null) frac=Math.max(frac,clamp(s.nowLevel/s.reg.cotaAlerta,0,1));
+      if((s.trend||0)>rise) rise=s.trend;
+    });
+    let lim=LIM_CHEIA*(1-0.5*frac); if(rise>=10) lim*=0.9; lim=Math.max(30,lim);
+    const limAt=lim*(LIM_ATEN/LIM_CHEIA);
+    // solo encharcado amplifica o que vem
+    const ante=obs?sum(obs.slice(HMAX-24)):0;
+    const amp=clamp(1+ante/150,1,1.5);
+    // janela movel de 12 h: passado medido + futuro previsto*amp
+    const hist=obs?obs.slice(HMAX-12):new Array(12).fill(0);
+    const fut=[]; for(let t=0;t<ETA_H;t++) fut.push(fcRainAt(t)*amp);
+    const line=hist.concat(fut);
+    let eta=null, etaAt=null, peak=0, peakAt=null;
+    for(let t=0;t<ETA_H;t++){
+      const w=sum(line.slice(t+1,t+13));   // 12 h terminando em agora+t+1
+      if(w>peak){ peak=w; peakAt=t+1; }
+      if(eta==null&&w>=lim) eta=t+1;
+      if(etaAt==null&&w>=limAt) etaAt=t+1;
+    }
+    const agora=sum(line.slice(0,12));
+    return {ok:true, eta, etaAt, peak, peakAt, lim, limAt, agora, frac, rise, amp};
+  }
+  function etaTxt(h){ return h==null?null:(h<=1?"menos de 1 h":h+" h"); }
+
   function renderNetCard(){
     const el=$("#net-card"); if(!el) return;
     const st=(k,v,u)=>'<div class="nc-st">'+k+'<b>'+v+(u?' <small>'+u+'</small>':'')+'</b></div>';
@@ -909,6 +1032,19 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     else q.push(qk("Próxima chuva","sem","evento","nada à vista",false));
     if(w) q.push(qk("Nível "+w.reg.code, fmt(w.nowLevel,2),"m", (w.reg.cotaAlerta?("cota "+fmt(w.reg.cotaAlerta,1)+" m · "):"")+trendTxt(w), R.maxFrac>=0.7));
     else q.push(qk("Nível validado","--","","nenhuma régua validada com sinal",false));
+    // primeiro card: quando a CIDADE entra em risco (chuva sobre a bacia)
+    const E=cityFloodEta();
+    const gat=E.ok?("gatilho "+fmt(E.lim,0)+" mm/12 h"+(E.frac>=0.3?" (rio já em "+fmt(E.frac*100,0)+"% da cota)":"")):"";
+    if(!E.ok)
+      q.unshift(qk("Risco de enchente","--","","sem chuva medida nem previsão para calcular",false));
+    else if(E.agora>=E.lim)
+      q.unshift(qk("Risco de enchente","agora","",fmt(E.agora,0)+" mm nas últimas 12 h · "+gat,true));
+    else if(E.eta!=null)
+      q.unshift(qk("Risco de enchente","em "+etaTxt(E.eta),"","pico "+fmt(E.peak,0)+" mm/12 h · "+gat,true));
+    else if(E.etaAt!=null)
+      q.unshift(qk("Risco de enchente","atenção","em "+etaTxt(E.etaAt),"pico "+fmt(E.peak,0)+" mm/12 h, abaixo do "+gat,true));
+    else
+      q.unshift(qk("Risco de enchente","não","nas próximas 48 h","pico previsto "+fmt(E.peak,0)+" mm/12 h · "+gat,false));
     $("#risk-quick").innerHTML=q.join("");
   }
   function trendTxt(s){ if(!s||s.trend==null) return "sem tendência"; if(s.trend>=1) return "subindo "+fmt(s.trend,1)+" cm/h"; if(s.trend<=-1) return "baixando "+fmt(Math.abs(s.trend),1)+" cm/h"; return "estável"; }
@@ -1182,7 +1318,9 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
         prev=s.reg.bacia;
         a.push('<text x="0" y="'+(y-3.5).toFixed(1)+'" font-size="6.8" font-weight="700" letter-spacing="0.05em" fill="var(--faint)" font-family="var(--font-sans)">'+(s.reg.bacia==="areia"?"BACIA DO AREIA":"BACIA DO ROLANTE")+'</text>');
       }
-      a.push('<text x="'+(padL-6)+'" y="'+(y+rowH*0.74).toFixed(1)+'" text-anchor="end" font-size="8" font-weight="600" fill="var(--ink-2)" font-family="var(--font-sans)">'+s.reg.code+'</text>');
+      // rotulo curto (MG01) + distancia da cidade: o prefixo da rede nao diz nada ao leitor
+      a.push('<text x="'+(padL-6)+'" y="'+(y+rowH*0.55).toFixed(1)+'" text-anchor="end" font-size="8" font-weight="700" fill="var(--ink-2)" font-family="var(--font-sans)">'+codeTail(s.reg.code)+'</text>');
+      a.push('<text x="'+(padL-6)+'" y="'+(y+rowH*0.55+6.4).toFixed(1)+'" text-anchor="end" font-size="6.3" font-weight="600" fill="var(--faint)" font-family="var(--font-sans)">'+kmTxt(s.reg)+'</text>');
       for(let i=0;i<CH;i++){ const v=s.rain[off+i];
         a.push('<rect x="'+(padL+i*cw+0.35).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(cw-0.7).toFixed(1)+'" height="'+rowH+'" rx="1.5" fill="'+(v==null?"var(--hm-nd)":hmCol(v))+'"><title>'+s.reg.code+' ('+s.reg.rio+') · '+labels[off+i]+': '+(v==null?"sem dado":fmt(v,1)+" mm/h")+'</title></rect>'); }
       y+=rowH+gap;
@@ -1240,18 +1378,15 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   function prepDraw(svg){ svg.querySelectorAll(".chart-line").forEach(prepLine); }
   function prepDrawEl(svg){ svg.querySelectorAll(".chart-line").forEach(prepLine); }
   function prepLine(pl){ try{ const len=pl.getTotalLength(); pl.style.strokeDasharray=len; pl.style.strokeDashoffset=reduceMotion?0:len; }catch(e){} }
-  function buildFooter(){
-    $("#foot").textContent="Chuva: estações abertas de terceiros das quais só coletamos os dados, mais a previsão Open-Meteo (ECMWF/Best-Match) para Rolante. Nível de rio: só RSRL-GLLS e RSRL-BE01 estão validadas e comandam o risco. Bacia do Areia: EXFP-AR01, EXRL-IN01, RSRL-GLLS, RSRL-BE01, RSRL-AR01; Rolante: demais. Coordenadas reais; altitude aproximada. Atualiza a cada 5 min. Atualizado "+gen+" (BRT).";
-  }
 
   function renderAll(){
     buildContours();
     aggregateBasins(); NET=netSummary(); computeRisk();
     $("#clock").textContent=gen.split(" ")[1]+" BRT";
-    renderNetCard(); renderRisk(); renderForecast(); renderGauges(); renderBasins(); chartRain(); chartRainMap(); renderContext(); buildFooter(); applyStormMode();
+    renderNetCard(); renderRisk(); renderForecast(); renderGauges(); renderBasins(); chartRain(); chartRainMap(); renderContext(); applyStormMode();
     requestAnimationFrame(()=>document.body.classList.add("ready"));
   }
-  function showEmpty(){ $("#risk-h").textContent="Sem dados das estações no momento."; $("#risk-drivers").textContent="Tentando novamente em instantes."; buildContours(); buildFooter(); document.body.classList.add("ready"); }
+  function showEmpty(){ $("#risk-h").textContent="Sem dados das estações no momento."; $("#risk-drivers").textContent="Tentando novamente em instantes."; buildContours(); document.body.classList.add("ready"); }
 
   async function cycle(){
     try{ await Promise.all([loadStations(), loadForecast()]); if(!ST.__anyData){ showEmpty(); return; } renderAll(); }
