@@ -588,6 +588,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
           <span class="cl"><span class="ln" style="background:var(--teal)"></span> fraca</span>
           <span class="cl"><span class="ln" style="background:var(--terra-deep)"></span> moderada</span>
           <span class="cl"><span class="ln" style="background:var(--alert)"></span> forte (&ge; 8 mm/h)</span>
+          <span class="cl"><span class="ln" style="background:var(--warn);opacity:0.5"></span> faixa clara = dia (nascer&rarr;pôr do sol)</span>
           <span class="cl" style="color:var(--muted)">passe o mouse para ver a hora · linha tracejada = agora; barras esmaecidas já passaram</span>
         </div>
       </div>
@@ -646,7 +647,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     {id:"80500E0214FFDAF4",code:"RSRL-CE01",lat:-29.650,lng:-50.575,klass:"local",alt:90,rio:"Rio Rolante",bacia:"rolante"},
     {id:"2CAED8D9CB62CEB5",code:"RSRL-BV01",lat:-29.640,lng:-50.560,klass:"local",alt:85,rio:"Boa Vista (baixo)",bacia:"rolante"},
     {id:"CF98FCFA7E9EE7C1",code:"RSRL-AR01",lat:-29.640,lng:-50.530,klass:"local",alt:78,rio:"Rio Areia",bacia:"areia"},
-    {id:"04109F675953A131",code:"RSRL-BE01",lat:-29.565,lng:-50.535,klass:"local",alt:60,rio:"Rio Areia (norte)",bacia:"areia",cotaNormal:0.09,cotaAlerta:0.5},
+    {id:"04109F675953A131",code:"RSRL-BE01",lat:-29.565,lng:-50.535,klass:"local",alt:60,rio:"Rio Areia (norte)",bacia:"areia",cotaNormal:0.09,cotaAlerta:0.7},
     {id:"BB45660B199C5677",code:"RSRL-RB01",lat:-29.635,lng:-50.545,klass:"local",alt:52,rio:"Rolante (centro)",bacia:"rolante"},
     {id:"5BA69743261D364A",code:"RSRL-RB02",lat:-29.650,lng:-50.545,klass:"local",alt:44,rio:"Rolante (ponte)",bacia:"rolante"}
   ];
@@ -732,6 +733,23 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   function hkLabel(hk){ const d=new Date(hk*3600*1000); return String(d.getHours()).padStart(2,"0")+"h"; }
   const DOW=["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
   async function fetchJSON(u){ const r=await fetch(u,{cache:"no-store"}); if(!r.ok) throw new Error(r.status); return r.json(); }
+  /* Nascer/por do sol para Rolante (-29.65,-50.57 · UTC-3 fixo, sem horario
+     de verao no Brasil desde 2019). Formula solar padrao (NOAA simplificada):
+     declinacao + equacao do tempo, com precisao de poucos minutos — o
+     bastante pra uma faixa visual, sem precisar de API externa. */
+  function eqOfTime(doy){ const B=2*Math.PI/365*(doy-81); return 9.87*Math.sin(2*B)-7.53*Math.cos(B)-1.5*Math.sin(B); }
+  function solarDecl(doy){ return -23.44*Math.PI/180*Math.cos(2*Math.PI/365*(doy+10)); }
+  function sunTimesFor(d){
+    const y=d.getFullYear(),mo=d.getMonth(),da=d.getDate();
+    const doy=Math.floor((Date.UTC(y,mo,da)-Date.UTC(y,0,1))/86400000)+1;
+    const lat=-29.65*Math.PI/180, lng=-50.57, LSTM=-45;
+    const decl=solarDecl(doy), eot=eqOfTime(doy);
+    const solarNoonMin=12*60-(4*(lng-LSTM)+eot);
+    let cosH=-Math.tan(lat)*Math.tan(decl); cosH=Math.max(-1,Math.min(1,cosH));
+    const halfDayMin=Math.acos(cosH)*180/Math.PI/15*60;
+    const mk=min=>new Date(y,mo,da,Math.floor(min/60),Math.round(min%60));
+    return { sunrise:mk(solarNoonMin-halfDayMin), sunset:mk(solarNoonMin+halfDayMin) };
+  }
 
   /* estado */
   let ST={}, BAS={}, NET=null, FC=null, RISK=null, labels=[], gen="", HERO=null;
@@ -927,18 +945,18 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
      bate a cota". Regua e pista, nao alvo.
 
      Gatilho: chuva efetiva acumulada em janela movel de 12 h sobre a bacia
-     (mesmo limiar ja usado no motor de risco: 80 mm/12 h = enchente,
+     (mesmo limiar ja usado no motor de risco: 100 mm/12 h = enchente,
      50 mm/12 h = atencao). A janela mistura o que ja foi MEDIDO pela rede
      com o que vem PREVISTO, hora a hora, ate 48 h.
 
      Dois ajustes, ambos vindos dos rios como pista:
        - rio ja alto  : cada ponto percentual de cota ocupado desconta do
                         limiar (rio cheio precisa de menos chuva para
-                        transbordar) — ate 50 % de desconto.
+                       transbordar) — ate 20 % de desconto, piso de 50 mm.
        - rio subindo  : subida >=10 cm/h desconta mais 10 %.
      Solo encharcado (chuva medida nas 24 h) amplifica a chuva prevista
      ate 1,5x — mesma agua rende mais escoamento em solo saturado.       */
-  const ETA_H=48, LIM_CHEIA=80, LIM_ATEN=50;
+  const ETA_H=48, LIM_CHEIA=100, LIM_ATEN=50;
   /* chuva medida na rede, hora a hora: usa o maximo entre estacoes, que e o
      nucleo do evento — e o que enche o rio, nao a media diluida da bacia. */
   function netRainSeries(){
@@ -964,7 +982,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       if(s.reg.cotaAlerta&&s.nowLevel!=null) frac=Math.max(frac,clamp(s.nowLevel/s.reg.cotaAlerta,0,1));
       if((s.trend||0)>rise) rise=s.trend;
     });
-    let lim=LIM_CHEIA*(1-0.5*frac); if(rise>=10) lim*=0.9; lim=Math.max(30,lim);
+    let lim=LIM_CHEIA*(1-0.2*frac); if(rise>=10) lim*=0.9; lim=Math.max(50,lim);
     const limAt=lim*(LIM_ATEN/LIM_CHEIA);
     // solo encharcado amplifica o que vem
     const ante=obs?sum(obs.slice(HMAX-24)):0;
@@ -1034,7 +1052,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     // atencao muda o texto de apoio, nao o veredito, pra nao virar alarme falso.
     const E=cityFloodEta();
     const rioTxt=(E.ok&&E.frac>=0.3)?(" · rio em "+fmt(E.frac*100,0)+"% da cota"):"";
-    const pede=E.ok?(" · enchente pede ~"+fmt(E.lim,0)+" mm"):"";
+    const pede=E.ok?(" · limiar ~"+fmt(E.lim,0)+" mm"):"";
     const pico=E.ok?("pico "+fmt(E.peak,0)+" mm/12 h"+(E.peakAt?(" em "+quandoTxt(E.peakAt)):"")+pede+rioTxt):"";
     if(!E.ok)
       q.unshift(qk("Enchente na cidade","--","","sem chuva medida nem previsão para calcular",false));
@@ -1229,16 +1247,43 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   function tipHide(){ const t=TIPEL||(TIPEL=$("#tip")); if(t) t.classList.remove("on"); }
   function rainWord(mm){ return mm>=8?"forte":mm>=3?"moderada":mm>0?"fraca":"sem chuva"; }
   function chartRain(){
-    const svg=$("#chart-rain"); const Wv=360,Hv=172,L=30,R=12,T=14,B=26;
+    const svg=$("#chart-rain"); const Wv=360,Hv=172,L=30,R=12,T=24,B=26;
     if(!FC||!FC.hourly||!FC.hourly.p.length){ svg.innerHTML='<text x="180" y="90" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--font-sans)">previsão indisponível</text>'; return; }
     const pr=FC.hourly.p, tt=FC.hourly.t, n=pr.length;
     const yMax=Math.max(2,Math.ceil(Math.max.apply(null,pr)*1.15));
     const xs=i=>L+i*(Wv-L-R)/(n-1), ys=v=>(Hv-B)-v/yMax*(Hv-B-T), a=[];
-    for(let g=0;g<=2;g++){ const val=yMax*g/2,yy=ys(val); a.push('<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)"/>'); a.push('<text x="'+(L-5)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+fmt(val,0)+'</text>'); }
     const bw=Math.max(1.4,(Wv-L-R)/n*0.66);
+    const t0=new Date(tt[0]).getTime();
+    const timeToX=ms=>xs(clamp((ms-t0)/3600000,0,n-1));
+    /* fundo do grafico = noite; uma faixa clara marca so o intervalo real
+       entre nascer e por do sol de cada dia (calculado pra Rolante, ver
+       sunTimesFor) — assim da pra ver de longe se o pico cai de dia ou de
+       madrugada, sem precisar ler a hora em cada barra. */
+    const dStart=new Date(tt[0]), dEnd=new Date(tt[n-1]);
+    for(let dt=new Date(dStart.getFullYear(),dStart.getMonth(),dStart.getDate());dt<=dEnd;dt.setDate(dt.getDate()+1)){
+      const sun=sunTimesFor(dt);
+      const x0=timeToX(sun.sunrise.getTime()), x1=timeToX(sun.sunset.getTime());
+      if(x1>x0) a.push('<rect x="'+x0.toFixed(1)+'" y="'+T+'" width="'+(x1-x0).toFixed(1)+'" height="'+(Hv-B-T)+'" fill="var(--warn)" opacity="0.09"/>');
+    }
+    for(let g=0;g<=2;g++){ const val=yMax*g/2,yy=ys(val); a.push('<line x1="'+L+'" y1="'+yy.toFixed(1)+'" x2="'+(Wv-R)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)"/>'); a.push('<text x="'+(L-5)+'" y="'+(yy+3).toFixed(1)+'" text-anchor="end" font-size="8.5" fill="var(--muted)" font-family="var(--font-sans)">'+fmt(val,0)+'</text>'); }
     const nowMs=Date.now();
     for(let i=0;i<n;i++){ if(pr[i]<=0) continue; const x=xs(i)-bw/2,y=ys(pr[i]),h=(Hv-B)-y,col=pr[i]>=8?"var(--alert)":pr[i]>=3?"var(--terra-deep)":"var(--teal)"; a.push('<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0.6,h).toFixed(1)+'" rx="1" fill="'+col+'"'+(new Date(tt[i]).getTime()<nowMs-3600000?' opacity="0.38"':'')+'/>'); }
-    for(let i=0;i<n;i+=12){ const d=new Date(tt[i]); a.push('<text x="'+xs(i).toFixed(1)+'" y="'+(Hv-9)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="var(--font-sans)">'+(String(d.getDate()).padStart(2,"0")+"/"+String(d.getHours()).padStart(2,"0")+"h")+'</text>'); }
+    for(let i=0;i<n;i+=12){ const d=new Date(tt[i]); a.push('<text x="'+xs(i).toFixed(1)+'" y="'+(Hv-9)+'" text-anchor="middle" font-size="8" fill="var(--muted)" font-family="var(--font-sans)">'+String(d.getHours()).padStart(2,"0")+'h</text>'); }
+    /* rotulo do dia (hoje/amanha/dia) centralizado no trecho, com linha
+       tracejada na virada da meia-noite — sem isso o eixo so mostra hora
+       e o leitor perde em que dia cada barra cai. */
+    let segStart=0;
+    for(let i=1;i<=n;i++){
+      const changed=i===n||new Date(tt[i]).getDate()!==new Date(tt[i-1]).getDate();
+      if(!changed) continue;
+      const segEnd=i-1, cx=(xs(segStart)+xs(segEnd))/2;
+      a.push('<text x="'+cx.toFixed(1)+'" y="9" text-anchor="middle" font-size="8.5" font-weight="700" fill="var(--ink-2)" font-family="var(--font-sans)">'+diaCurto(tt[segStart])+'</text>');
+      if(i<n){
+        const dx=(xs(segEnd)+xs(i))/2;
+        a.push('<line x1="'+dx.toFixed(1)+'" y1="'+T+'" x2="'+dx.toFixed(1)+'" y2="'+(Hv-B)+'" stroke="var(--line-2)" stroke-dasharray="2,2"/>');
+      }
+      segStart=i;
+    }
     /* a serie leva 3 h de cauda passada (barras esmaecidas); a linha do
        "agora" cai na fracao exata da hora corrente e anda durante ela. */
     const nowX=xs(clamp((nowMs-new Date(tt[0]).getTime())/3600000,0,n-1));
