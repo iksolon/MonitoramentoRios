@@ -1,0 +1,533 @@
+:root{
+  /* Paleta OKLCH, encosta da serra, luz de dia */
+  --bg:        oklch(0.965 0.013 148);
+  --bg-deep:   oklch(0.935 0.016 150);
+  --surface:   oklch(0.991 0.006 140);
+  --surface-2: oklch(0.975 0.010 145);
+
+  --ink:       oklch(0.265 0.032 158);
+  --ink-2:     oklch(0.405 0.030 156);
+  --muted:     oklch(0.545 0.022 152);
+  --faint:     oklch(0.66 0.018 150);
+
+  --line:      oklch(0.885 0.014 150);
+  --line-2:    oklch(0.825 0.018 150);
+
+  --pine:      oklch(0.345 0.062 158);
+  --pine-deep: oklch(0.255 0.052 160);
+  --moss:      oklch(0.640 0.110 132);
+  --moss-deep: oklch(0.520 0.098 134);
+  --granite:   oklch(0.560 0.014 235);
+  --granite-2: oklch(0.700 0.012 235);
+  --terra:     oklch(0.610 0.120 55);
+  --terra-deep:oklch(0.510 0.115 50);
+  --teal:      oklch(0.615 0.088 208);
+  --teal-deep: oklch(0.470 0.082 212);
+  --teal-soft: oklch(0.760 0.062 205);
+
+  --warn:      oklch(0.720 0.135 78);
+  --warn-deep: oklch(0.590 0.130 66);
+  --alert:     oklch(0.585 0.155 38);
+
+  --sky-1:     oklch(0.905 0.036 218);
+  --sky-2:     oklch(0.945 0.024 175);
+
+  --r-sm: 8px; --r: 12px; --r-lg: 16px; --r-xl: 22px;
+  --sh-1: 0 1px 2px oklch(0.30 0.04 158 / 0.06), 0 1px 1px oklch(0.30 0.04 158 / 0.05);
+  --sh-2: 0 2px 6px oklch(0.30 0.04 158 / 0.07), 0 12px 30px oklch(0.28 0.05 160 / 0.09);
+
+  --font-display: "Fraunces", "Iowan Old Style", Palatino, "Palatino Linotype", Georgia, serif;
+  --font-sans: "Hanken Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+
+  --maxw: 720px;
+  --rl-h: clamp(28px, 7.6vw, 34px);
+
+  /* Escala do mapa de calor da chuva. Fica aqui, com as outras variaveis, e
+     nao no meio do arquivo: o modo tempestade so troca os valores. */
+  --hm-nd: oklch(0.930 0.004 150);
+  --hm-0:  oklch(0.955 0.008 200);
+  --hm-1:  oklch(0.885 0.040 205);
+  --hm-2:  oklch(0.790 0.070 205);
+  --hm-3:  oklch(0.660 0.098 208);
+  --hm-4:  oklch(0.560 0.120 45);
+  --hm-5:  oklch(0.500 0.170 32);
+}
+
+*{ box-sizing: border-box; }
+html{ -webkit-text-size-adjust: 100%; }
+body{
+  margin:0;
+  background:
+    radial-gradient(120% 60% at 12% -6%, var(--sky-2) 0%, transparent 46%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Textura de curvas de nivel ao fundo */
+.topo-bg{
+  position: fixed; inset: 0; z-index: 0;
+  pointer-events: none;
+  opacity: 0.85;
+}
+.topo-bg svg{ width:100%; height:100%; display:block; }
+
+.wrap{ position: relative; z-index: 1; max-width: var(--maxw); margin: 0 auto; padding: 0 16px 40px; }
+
+/* Cabecalho */
+.site-head{
+  display:flex; align-items:flex-end; justify-content:space-between; gap:12px;
+  padding: 22px 2px 16px;
+}
+.brand{ display:flex; align-items:center; gap:11px; min-width:0; }
+.brand .mark{ flex:0 0 auto; width:34px; height:34px; }
+.brand h1{
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: 1.28rem;
+  line-height: 1.02;
+  letter-spacing: 0.005em;
+  margin: 0; color: var(--pine-deep);
+}
+.brand p{ margin:2px 0 0; font-size: 0.74rem; color: var(--muted); letter-spacing: 0.01em; }
+.head-live{ flex:0 0 auto; text-align:right; }
+.head-live .clock{ font-size: 0.86rem; font-weight:600; color: var(--ink-2); }
+.head-live .live{ display:inline-flex; align-items:center; gap:6px; font-size:0.68rem; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; margin-top:2px; }
+.dot{ width:7px; height:7px; border-radius:50%; background: var(--moss); box-shadow: 0 0 0 3px oklch(0.64 0.11 132 / 0.18); }
+.dot.pulse{ animation: pulse 2.6s ease-out infinite; }
+@keyframes pulse{ 0%{ box-shadow:0 0 0 0 oklch(0.64 0.11 132 / 0.30);} 70%{ box-shadow:0 0 0 7px oklch(0.64 0.11 132 / 0);} 100%{ box-shadow:0 0 0 0 oklch(0.64 0.11 132 / 0);} }
+
+/* Faixa de realizacao: quem assina o projeto */
+.realiza{
+  display: flex; align-items: center;
+  gap: 10px 16px; flex-wrap: wrap;
+  padding: 18px 2px 4px;
+}
+.realiza-tag{
+  display:inline-flex; align-items:center; gap:9px;
+  font-size: 0.605rem; font-weight:700; text-transform:uppercase; letter-spacing:0.17em;
+  color: var(--faint); white-space:nowrap;
+}
+.realiza-tag::before{ content:""; width:14px; height:1px; background: var(--line-2); }
+.realiza-rule{
+  flex: 1 1 30px; min-width: 24px; height:1px; align-self:center;
+  background: linear-gradient(90deg, var(--line-2) 0%, var(--line-2) 48%, transparent 100%);
+}
+.realiza-logos{ display:flex; align-items:center; gap:16px; min-width:0; }
+.realiza-logos .rl{
+  display:block; opacity:0.94;
+  transition: opacity .3s cubic-bezier(.22,1,.36,1), transform .3s cubic-bezier(.22,1,.36,1);
+}
+.realiza-logos .rl img{ display:block; width:auto; }
+.rl-bea img{ height: calc(var(--rl-h) * 2.11); }
+.rl-acisa img{ height: calc(var(--rl-h) * 1.22); }
+.realiza-sep{
+  flex:0 0 auto; width:1px; height:30px;
+  background: linear-gradient(180deg, transparent, var(--line-2) 22%, var(--line-2) 78%, transparent);
+}
+@media (hover:hover){
+  .realiza-logos .rl:hover{ opacity:1; transform: translateY(-1.5px); }
+}
+.realiza-logos .rl:focus-visible{ outline:2px solid var(--teal); outline-offset:5px; border-radius:3px; opacity:1; }
+@media (max-width: 430px){
+  .realiza{ justify-content: space-between; padding-top: 14px; }
+  .realiza-rule{ display:none; }
+  .realiza-logos{ gap: 13px; }
+  .realiza-logos .rl{ min-height:44px; display:inline-flex; align-items:center; }
+  .storm-btn{ min-height:44px; padding:8px 16px; }
+}
+
+/* Blocos de secao */
+section{ margin-top: 18px; }
+.panel{
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+}
+.eyebrow{
+  font-size: 0.70rem; font-weight:700; text-transform: uppercase;
+  letter-spacing: 0.10em; color: var(--moss-deep);
+}
+.sec-head{ display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin: 0 2px 10px; }
+.sec-head h2{
+  font-family: var(--font-display); font-optical-sizing:auto; font-weight:600;
+  font-size: 1.2rem; color: var(--pine-deep); margin:0; letter-spacing:0.005em;
+}
+.sec-head .hint{ font-size: 0.74rem; color: var(--muted); }
+
+/* HERO */
+.hero{
+  position: relative; overflow: hidden;
+  padding: 20px 20px 0;
+  background:
+    radial-gradient(140% 120% at 88% -20%, oklch(0.955 0.02 200 / 0.7) 0%, transparent 55%),
+    var(--surface);
+}
+.hero .eyebrow{ color: var(--pine); }
+.hero-top{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pill{
+  display:inline-flex; align-items:center; gap:7px;
+  padding: 4px 11px 4px 9px; border-radius: 999px;
+  font-size: 0.76rem; font-weight:600; letter-spacing:0.01em;
+}
+.pill .pdot{ width:8px; height:8px; border-radius:50%; }
+.pill.atencao{ background: oklch(0.72 0.135 78 / 0.16); color: var(--warn-deep); }
+.pill.atencao .pdot{ background: var(--warn); }
+.pill.alerta{ background: oklch(0.585 0.155 38 / 0.15); color: var(--alert); }
+.pill.alerta .pdot{ background: var(--alert); }
+.pill.normal{ background: oklch(0.64 0.11 132 / 0.16); color: var(--moss-deep); }
+.pill.normal .pdot{ background: var(--moss); }
+
+.hero-grid{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-top:8px; }
+.hero-read{ min-width: 0; }
+.hero-station{ font-size:0.82rem; color: var(--ink-2); margin: 8px 0 2px; }
+.hero-station b{ color: var(--pine-deep); font-weight:600; }
+.hero-num{ display:flex; align-items:baseline; gap:8px; }
+.hero-num .big{
+  font-family: var(--font-display); font-optical-sizing:auto;
+  font-weight: 600; font-size: clamp(3.5rem, 15vw, 5.1rem); line-height: 0.9;
+  color: var(--pine-deep); letter-spacing: -0.01em;
+}
+.hero-num .unit{ font-family: var(--font-display); font-weight:500; font-size: 1.5rem; color: var(--pine); }
+.hero-trend{ display:flex; align-items:center; gap:7px; font-size: 0.92rem; color: var(--terra-deep); font-weight:600; margin-top:6px; }
+.hero-trend .arw{ font-size: 0.9rem; }
+.hero-forecast{ font-size: 0.9rem; color: var(--ink-2); margin: 10px 0 0; max-width: 34ch; }
+.hero-forecast b{ color: var(--pine-deep); font-weight:600; }
+.hero-updated{ font-size: 0.72rem; color: var(--muted); margin: 12px 0 0; }
+.hero-spark{ flex: 0 0 auto; }
+.hero-spark .cap{ font-size:0.68rem; color: var(--muted); text-align:right; margin-bottom:3px; letter-spacing:0.02em; }
+.hero-ridge{ display:block; width: calc(100% + 40px); margin: 14px -20px 0; }
+
+/* Linha de stats */
+.stats{ display:flex; flex-wrap:wrap; gap: 2px 0; padding: 4px 2px; }
+.stat{ flex:1 1 33%; min-width: 150px; padding: 12px 16px; position: relative; }
+.stat + .stat::before{ content:""; position:absolute; left:0; top:14px; bottom:14px; width:1px; background: var(--line); }
+.stat .k{ font-size: 0.72rem; color: var(--muted); letter-spacing:0.01em; }
+.stat .v{ font-size: 1.32rem; font-weight:600; color: var(--pine-deep); margin-top:2px; line-height:1.1; }
+.stat .v small{ font-size: 0.8rem; font-weight:600; color: var(--ink-2); }
+.stat .tag{ display:inline-block; font-size:0.68rem; font-weight:600; padding:1px 7px; border-radius:999px; margin-left:4px; vertical-align: 2px; }
+.tag.fraca{ background: oklch(0.615 0.088 208 / 0.16); color: var(--teal-deep); }
+.tag.moderada{ background: oklch(0.64 0.11 132 / 0.16); color: var(--moss-deep); }
+.tag.forte{ background: oklch(0.72 0.135 78 / 0.18); color: var(--warn-deep); }
+.tag.intensa{ background: oklch(0.585 0.155 38 / 0.15); color: var(--alert); }
+.tag.seco{ background: var(--surface-2); color: var(--muted); }
+
+/* Panorama */
+.pano-read{ font-size: 0.76rem; color: var(--muted); margin: 0 2px 10px; }
+.pano-stage{ position: relative; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: linear-gradient(180deg, var(--sky-1), var(--sky-2) 62%, oklch(0.95 0.02 150) 100%); }
+.pano-stage svg{ display:block; width:100%; height:auto; }
+.pano-legend{ display:flex; flex-wrap:wrap; gap: 8px 16px; margin: 12px 4px 0; }
+.leg{ display:inline-flex; align-items:center; gap:7px; font-size: 0.74rem; color: var(--ink-2); }
+.leg .sw{ width:16px; height:11px; border-radius:3px; flex:0 0 auto; }
+.leg .sw.soak{ background: linear-gradient(180deg, oklch(0.615 0.088 208 / 0.55), oklch(0.64 0.11 132 / 0.4)); border:1px solid oklch(0.47 0.082 212 / 0.3); }
+.leg .sw.rio{ background: var(--teal-deep); height:4px; border-radius:2px; }
+.leg .drops{ position:relative; width:16px; height:12px; }
+.leg .drops i{ position:absolute; width:2px; height:6px; border-radius:1px; background: var(--teal); }
+.leg .drops i:nth-child(1){ left:2px; top:1px; } .leg .drops i:nth-child(2){ left:8px; top:4px; } .leg .drops i:nth-child(3){ left:13px; top:0; }
+
+.verdict{
+  display:flex; gap:11px; align-items:flex-start;
+  margin: 14px 2px 0; padding: 13px 15px;
+  background: linear-gradient(180deg, oklch(0.64 0.11 132 / 0.08), oklch(0.615 0.088 208 / 0.06));
+  border: 1px solid oklch(0.52 0.098 134 / 0.28);
+  border-radius: var(--r);
+}
+.verdict .vi{ flex:0 0 auto; margin-top:1px; }
+.verdict p{ margin:0; font-size: 0.92rem; color: var(--pine-deep); line-height:1.45; }
+.verdict p b{ font-weight:600; }
+
+/* Estacoes de nivel */
+.levels{ padding: 14px; }
+.lv-status{ font-size:0.68rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; padding:2px 8px; border-radius:999px; }
+.st-normal{ background: oklch(0.64 0.11 132 / 0.15); color: var(--moss-deep); }
+.st-observa{ background: oklch(0.615 0.088 208 / 0.15); color: var(--teal-deep); }
+.st-atencao{ background: oklch(0.72 0.135 78 / 0.18); color: var(--warn-deep); }
+.st-alerta{ background: oklch(0.585 0.155 38 / 0.14); color: var(--alert); }
+.st-inund{ background: oklch(0.585 0.155 38 / 0.22); color: var(--alert); }
+
+/* Series */
+.series{ padding: 14px; }
+.chart-block{ margin-top: 6px; }
+.chart-block + .chart-block{ margin-top: 20px; }
+.chart-title{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin: 0 2px 6px; }
+.chart-title h3{ font-family: var(--font-display); font-weight:600; font-size: 0.98rem; color: var(--pine-deep); margin:0; }
+.chart-title .u{ font-size: 0.72rem; color: var(--muted); }
+.chart-wrap{ border:1px solid var(--line); border-radius: var(--r); background: var(--surface-2); padding: 6px 6px 2px; }
+.chart-wrap svg{ display:block; width:100%; height:auto; }
+.chart-legend{ display:flex; flex-wrap:wrap; gap:6px 14px; margin: 8px 4px 0; }
+.cl{ display:inline-flex; align-items:center; gap:7px; font-size:0.74rem; color: var(--ink-2); }
+.cl .ln{ width:16px; height:3px; border-radius:2px; flex:0 0 auto; }
+.cl b{ font-weight:600; color: var(--pine-deep); }
+/* Amostras de legenda. Antes cada uma levava style="background:..." no HTML
+   (grafico horario) e em string montada no JS (mapa de calor) — mesma cor
+   declarada em dois lugares, sem nome. Agora a faixa tem nome e um lugar so. */
+.cl .ln-fraca{ background: var(--teal); }
+.cl .ln-moderada{ background: var(--terra-deep); }
+.cl .ln-forte{ background: var(--alert); }
+.cl .ln-dia{ background: var(--warn); opacity: 0.5; }
+.cl.nota{ color: var(--muted); }
+.cl .sw{ width:13px; height:13px; border-radius:3px; flex:0 0 auto; border:1px solid oklch(0.30 0.03 150 / 0.12); }
+.cl .sw-0{ background: var(--hm-0); }
+.cl .sw-2{ background: var(--hm-2); }
+.cl .sw-3{ background: var(--hm-3); }
+.cl .sw-4{ background: var(--hm-4); }
+.cl .sw-5{ background: var(--hm-5); }
+.chart-read{ margin:9px 2px 0; padding:8px 11px; border-radius:var(--r); background: var(--surface-2); border-left:3px solid var(--teal-deep); font-size:0.82rem; line-height:1.45; color:var(--ink-2); }
+.chart-read b{ color:var(--pine-deep); font-weight:600; }
+
+/* Sparklines de contexto */
+.ctx-grid{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ctx{ padding: 11px 12px; border-radius: var(--r); background: var(--surface-2); border:1px solid var(--line); }
+.ctx .k{ font-size:0.70rem; color: var(--muted); letter-spacing:0.02em; }
+.ctx .v{ font-size:1.1rem; font-weight:600; color: var(--pine-deep); margin: 1px 0 5px; }
+.ctx .v small{ font-size:0.72rem; color: var(--muted); font-weight:600; }
+.ctx svg{ display:block; width:100%; height: 34px; }
+/* Estado vazio do bloco de contexto: ocupa a grade inteira. */
+.ctx-vazio{ grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); }
+
+/* ===== Rede + contexto (linha superior) ===== */
+.top-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 2px; }
+.top-row .netcard{ margin:0; }
+.ctx-sub{ font-size:0.78rem; color:var(--muted); margin: 2px 2px 8px; }
+@media (max-width:620px){ .top-row{ grid-template-columns: 1fr; } }
+
+/* Nota previsao */
+.forecast-note{ display:flex; align-items:flex-start; gap:12px; padding: 14px 16px; }
+.forecast-note .fi{ flex:0 0 auto; margin-top:1px; }
+.forecast-note .txt{ font-size: 0.86rem; color: var(--ink-2); }
+.forecast-note .txt b{ color: var(--pine-deep); font-weight:600; }
+/* Tooltip */
+.tip{
+  position: fixed; z-index: 20; pointer-events:none;
+  /* posicao calculada no JS entra como dado, nao como estilo inline */
+  left: var(--x, 0); top: var(--y, 0);
+  /* cores fixas: --pine-deep inverte no modo tempestade e sumiria o texto */
+  background: oklch(0.26 0.045 238 / 0.97); color: oklch(0.94 0.02 210);
+  padding: 8px 10px; border-radius: 9px; font-size: 0.74rem; line-height:1.35;
+  box-shadow: var(--sh-2); max-width: 210px; opacity:0; transform: translateY(3px);
+  transition: opacity .14s ease-out, transform .14s ease-out;
+}
+.tip.on{ opacity:1; transform: translateY(0); }
+.tip b{ color: oklch(0.99 0.015 200); }
+.tip .kv{ color: oklch(0.84 0.045 210); }
+
+/* Marcador de hora / hover nos graficos */
+.now-line{ stroke: var(--alert); stroke-width:1.1; stroke-dasharray:3 3; }
+.now-tag{ font-size:7.5px; font-weight:700; fill: var(--alert); font-family: var(--font-sans); letter-spacing:0.02em; }
+.hover-band{ fill: var(--ink); opacity:0.10; }
+.hover-line{ stroke: var(--ink-2); stroke-width:1; opacity:0.5; }
+.chart-hit{ cursor: crosshair; }
+
+/* Reveal por entrada */
+.reveal{ opacity:0; transform: translateY(10px); transition: opacity .7s ease-out, transform .7s cubic-bezier(.16,1,.3,1); }
+body.ready .reveal{ opacity:1; transform:none; }
+.reveal.d1{ transition-delay:.05s; } .reveal.d2{ transition-delay:.12s; } .reveal.d3{ transition-delay:.19s; }
+
+/* Animacoes do panorama */
+/* Cada pingo cai com duracao e atraso proprios (sorteados no JS) para a chuva
+   nao pulsar em bloco: --dur, --delay e --fall sao dado, nao estilo. */
+.pano-drop{ stroke: var(--teal-deep); stroke-width: 1.6; stroke-linecap: round; opacity: 0.72;
+  animation: rl-fall linear infinite; animation-duration: var(--dur); animation-delay: var(--delay); }
+@keyframes rl-fall{ from{ transform: translateY(0);} to{ transform: translateY(var(--fall)); } }
+.pano-river{ stroke-dasharray: 7 7; animation: rl-flow 1.1s linear infinite; }
+@keyframes rl-flow{ from{ stroke-dashoffset: 28; } to{ stroke-dashoffset: 0; } }
+.pano-chev{ animation: rl-chev 2.6s ease-out infinite; }
+@keyframes rl-chev{ 0%,100%{ opacity:.25;} 45%{ opacity:.8; } }
+.pano-halo{ transform-box: fill-box; transform-origin: 50% 50%; animation: rl-halo 1.9s ease-out infinite; }
+.pano-halo.d2{ animation-delay: 0.95s; }
+@keyframes rl-halo{ 0%{ transform: scale(0.5); opacity:.9; } 100%{ transform: scale(2.5); opacity:0; } }
+.pano-mm{ animation: rl-breathe 2.4s ease-in-out infinite; }
+.pano-cloud{ animation: rl-breathe 3.4s ease-in-out infinite; }
+.pano-wetseg{ animation: rl-breathe 2.0s ease-in-out infinite; }
+@keyframes rl-breathe{ 0%,100%{ opacity:.6; } 50%{ opacity:1; } }
+.pano-wet circle{ animation: rl-breathe 2.0s ease-in-out infinite; }
+.pano-water{ transform: scaleY(0); transform-box: fill-box; transform-origin: 50% 100%; transition: transform 1.5s cubic-bezier(.16,1,.3,1); }
+body.ready .pano-water{ transform: scaleY(1); }
+/* Animacao de "desenhar a linha": o JS mede o traco e entrega o comprimento em
+   --len (e --off = 0 quando o sistema pede menos animacao). Antes o JS escrevia
+   stroke-dasharray/offset direto no elemento, e por isso o estado final precisava
+   de !important para vencer o inline. */
+.chart-line{ stroke-dasharray: var(--len, none); stroke-dashoffset: var(--off, 0);
+  transition: stroke-dashoffset 1.5s ease-out; }
+body.ready .chart-line{ stroke-dashoffset: 0; }
+
+@media (max-width: 460px){
+  .stat{ flex-basis: 50%; }
+  .ctx-grid{ grid-template-columns: 1fr; }
+  .ctx{ display:grid; grid-template-columns: 1fr auto; align-items:center; gap: 2px 12px; }
+  .ctx .k{ grid-column:1; } .ctx .v{ grid-column:1; margin:0; } .ctx svg{ grid-column:2; grid-row: 1 / 3; width: 96px; }
+}
+@media (min-width: 620px){
+  .hero{ padding: 26px 26px 0; }
+  body{ font-size: 15.5px; }
+}
+
+@media (prefers-reduced-motion: reduce){
+  *{ animation: none !important; }
+  .realiza-logos .rl{ transition:none; }
+  .reveal{ opacity:1; transform:none; transition:none; }
+  .pano-drop{ display:none; }
+  .pano-halo{ transform: scale(1.35); opacity:.55; }
+  .pano-mm,.pano-cloud,.pano-wetseg{ opacity:.9; }
+  .pano-water{ transform: scaleY(1); transition:none; }
+  .lv-bar .fill{ transition:none; }
+  .chart-line{ transition:none; stroke-dashoffset:0; }
+}
+
+/* ===== Risco hero ===== */
+.risk{ padding: 20px 20px 18px; position:relative; overflow:hidden;
+  background: radial-gradient(140% 120% at 88% -20%, oklch(0.955 0.02 200 / 0.7) 0%, transparent 55%), var(--surface); }
+.risk-top{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.risk-badge{ display:inline-flex; align-items:center; gap:9px; padding:6px 15px 6px 12px; border-radius:999px; font-weight:700; font-size:0.9rem; letter-spacing:0.02em; }
+.risk-badge .pdot{ width:10px; height:10px; border-radius:50%; }
+.risk-badge.baixo{ background: oklch(0.64 0.11 132 / 0.16); color: var(--moss-deep); } .risk-badge.baixo .pdot{ background: var(--moss); }
+.risk-badge.atencao{ background: oklch(0.72 0.135 78 / 0.18); color: var(--warn-deep); } .risk-badge.atencao .pdot{ background: var(--warn); }
+.risk-badge.alto{ background: oklch(0.585 0.155 38 / 0.16); color: var(--alert); } .risk-badge.alto .pdot{ background: var(--alert); animation: pulse 2.4s ease-out infinite; }
+.risk-when{ font-size:0.76rem; color:var(--muted); }
+.risk-headline{ font-family: var(--font-display); font-optical-sizing:auto; font-weight:600; font-size: clamp(1.5rem, 6vw, 2.15rem); line-height:1.08; color: var(--pine-deep); margin: 12px 0 0; letter-spacing:0.003em; }
+.risk-drivers{ font-size: 0.95rem; color: var(--ink-2); margin: 9px 0 0; max-width: 60ch; line-height:1.5; }
+.risk-drivers b{ color: var(--pine-deep); font-weight:600; }
+.risk-quick{ display:flex; flex-wrap:wrap; gap: 10px; margin-top: 16px; }
+.qk{ flex:1 1 130px; min-width:120px; padding: 11px 13px; border-radius: var(--r); background: var(--surface-2); border:1px solid var(--line); }
+.qk .k{ font-size:0.68rem; color:var(--muted); letter-spacing:0.02em; text-transform:uppercase; }
+.qk .v{ font-size:1.22rem; font-weight:600; color:var(--pine-deep); margin-top:3px; line-height:1.05; }
+.qk .v small{ font-size:0.72rem; color:var(--ink-2); font-weight:600; }
+.qk .sub{ font-size:0.72rem; color:var(--muted); margin-top:2px; }
+.qk.hl{ background: linear-gradient(180deg, oklch(0.72 0.135 78 / 0.09), var(--surface)); border-color: oklch(0.72 0.135 78 / 0.28); }
+
+/* Aviso legal, discreto e no fim da pagina */
+.disclaimer{ margin: 18px 2px 4px; font-size:0.72rem; line-height:1.5; color: var(--muted); }
+
+/* ===== Previsao mm ===== */
+.fc-next{ display:flex; gap:14px; align-items:flex-start; margin: 2px 2px 14px; padding: 14px 16px; border-radius: var(--r);
+  background: linear-gradient(180deg, oklch(0.615 0.088 208 / 0.09), oklch(0.64 0.11 132 / 0.05)); border:1px solid oklch(0.52 0.098 134 / 0.26); }
+.fc-next .ic{ flex:0 0 auto; margin-top:2px; }
+.fc-next .tx{ font-size:0.95rem; color: var(--pine-deep); line-height:1.5; }
+.fc-next .tx b{ font-weight:700; }
+.fc-next .big{ font-family: var(--font-display); font-weight:600; font-size:1.35rem; color:var(--teal-deep); }
+.fc-days{ display:grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap:6px; }
+.fc-d{ text-align:center; padding: 9px 4px 8px; border-radius: var(--r-sm); background: var(--surface-2); border:1px solid var(--line); position:relative; }
+.fc-d .dow{ font-size:0.66rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; }
+.fc-d .dnum{ font-size:0.7rem; color:var(--faint); }
+.fc-bar{ height:52px; display:flex; align-items:flex-end; justify-content:center; margin:6px 0 4px; }
+/* --h vem do dado (mm do dia proporcionais ao maior da semana). */
+.fc-bar .b{ width:14px; border-radius:3px 3px 0 0; background: linear-gradient(180deg, var(--teal), var(--teal-deep)); min-height:2px; height: var(--h); }
+.fc-d.wet .b{ background: linear-gradient(180deg, oklch(0.68 0.14 55), var(--terra-deep)); }
+.fc-d.heavy .b{ background: linear-gradient(180deg, oklch(0.66 0.16 42), var(--alert)); }
+.fc-d .mm{ font-size:0.8rem; font-weight:700; color:var(--pine-deep); }
+.fc-d .pb{ font-size:0.64rem; color:var(--muted); }
+.fc-d.today{ outline:2px solid oklch(0.52 0.098 134 / 0.4); outline-offset:-1px; }
+.fc-note{ font-size:0.74rem; color:var(--muted); margin: 10px 2px 0; }
+
+/* ===== Bacias ===== */
+.basin{ margin-top: 14px; border:1px solid var(--line); border-radius: var(--r); overflow:hidden; background: var(--surface-2); }
+.basin-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; padding: 12px 14px; background: var(--surface); border-bottom:1px solid var(--line); }
+.basin-head .nm{ font-family: var(--font-display); font-weight:600; font-size:1.05rem; color:var(--pine-deep); }
+.basin-head .nm small{ font-family: var(--font-sans); font-weight:500; font-size:0.72rem; color:var(--muted); display:block; margin-top:1px; }
+.basin-verd{ font-size:0.72rem; font-weight:700; padding:3px 9px; border-radius:999px; }
+.basin-body{ padding: 12px 14px; }
+.basin-pano{ margin: 2px 0 6px; border-radius: var(--r); overflow:hidden; border:1px solid var(--line); background: linear-gradient(180deg, var(--sky-1), var(--sky-2) 58%, oklch(0.95 0.02 150) 100%); }
+.basin-pano svg{ display:block; width:100%; height:auto; }
+.basin-cap{ font-size:0.7rem; color:var(--muted); margin:0 2px 10px; line-height:1.4; }
+.basin-cap .chovendo{ color: var(--teal-deep); }
+.basin-nums{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:10px; }
+.bn{ font-size:0.72rem; color:var(--muted); } .bn b{ display:block; font-size:1.15rem; color:var(--pine-deep); font-weight:600; margin-top:1px; } .bn b small{ font-size:0.7rem; color:var(--ink-2); font-weight:600; }
+.sbars{ display:flex; flex-direction:column; gap:7px; }
+.sbar{ display:grid; grid-template-columns: 92px 1fr auto; align-items:center; gap:9px; }
+.sbar .snm{ font-size:0.78rem; color:var(--ink-2); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.sbar .snm i{ font-style:normal; font-size:0.66rem; color:var(--faint); font-weight:500; }
+.sbar .track{ height:10px; border-radius:999px; background: oklch(0.885 0.014 150); overflow:hidden; }
+/* --w vem do dado (mm da estacao sobre o maior da bacia). */
+.sbar .track .f{ height:100%; border-radius:999px; background: linear-gradient(90deg, var(--teal-soft), var(--teal-deep)); width: var(--w); }
+.sbar.dry .track .f{ background: var(--line-2); }
+.sbar .val{ font-size:0.76rem; font-weight:600; color:var(--pine-deep); min-width:56px; text-align:right; }
+
+
+/* ===== Rios (reforco) ===== */
+.gauges{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.gauge{ padding: 14px; border-radius: var(--r); background: var(--surface-2); border:1px solid var(--line); }
+.gauge .g-nm{ font-size:0.82rem; color:var(--ink-2); } .gauge .g-nm b{ color:var(--pine-deep); font-weight:600; }
+.gauge .g-rio{ color: var(--muted); font-size: 0.74rem; }
+.gauge .g-num{ display:flex; align-items:baseline; gap:6px; margin-top:4px; }
+.gauge .g-num .big{ font-family:var(--font-display); font-weight:600; font-size:2.2rem; line-height:0.95; color:var(--pine-deep); }
+.gauge .g-num .u{ font-size:1rem; color:var(--pine); font-weight:500; }
+.gauge .g-tr{ font-size:0.82rem; font-weight:600; margin-top:5px; } .gauge .g-tr.up{ color:var(--terra-deep); } .gauge .g-tr.calm{ color:var(--moss-deep); } .gauge .g-tr.down{ color:var(--teal-deep); }
+.gauge .g-mm{ font-size:0.7rem; color:var(--muted); margin-top:6px; }
+.gauge .g-spark{ margin-top:8px; } .gauge .g-spark svg{ width:100%; height:34px; display:block; }
+.gauge.lead{ background: linear-gradient(180deg, oklch(0.615 0.088 208 / 0.06), var(--surface)); border-color: oklch(0.47 0.082 212 / 0.28); }
+
+@media (max-width:520px){ .gauges{ grid-template-columns:1fr; } .fc-days{ grid-template-columns: repeat(7, minmax(0, 1fr)); gap:3px; } .fc-d{ padding:7px 2px 6px; } .fc-d .b, .fc-bar .b{ width:10px; }
+  .sbar{ grid-template-columns: 1fr auto; row-gap:4px; }
+  .sbar .snm{ grid-column: 1 / -1; white-space:normal; overflow:visible; text-overflow:unset; }
+}
+
+/* ===== Modo tempestade ===== */
+/* --cvw/--cvh vem do JS (viewport em px CSS, para casar com o buffer/DPR).
+   Canvas e elemento substituido: inset:0 nao o estica, sem tamanho declarado
+   ele assume o proprio buffer em px CSS e a chuva sai ampliada e vazando.
+   Fallback 100% cobre o instante antes do primeiro fit(). */
+#storm{ position:fixed; inset:0; z-index:0; display:none; pointer-events:none;
+  width: var(--cvw, 100%); height: var(--cvh, 100%); }
+.storm-btn{ margin-top:6px; font-family:var(--font-sans); font-size:0.66rem; font-weight:600; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:3px 10px; cursor:pointer; letter-spacing:0.02em; -webkit-appearance:none; }
+.storm-btn[aria-pressed="true"]{ background: oklch(0.585 0.155 38 / 0.16); color: var(--alert); border-color: oklch(0.585 0.155 38 / 0.32); }
+body.storm{
+  --bg: oklch(0.20 0.03 240); --bg-deep: oklch(0.15 0.03 245);
+  --surface: oklch(0.27 0.032 240 / 0.66); --surface-2: oklch(0.32 0.03 240 / 0.5);
+  --ink: oklch(0.96 0.02 220); --ink-2: oklch(0.87 0.03 220); --muted: oklch(0.75 0.03 225); --faint: oklch(0.64 0.03 225);
+  --line: oklch(0.82 0.05 230 / 0.20); --line-2: oklch(0.82 0.05 230 / 0.30);
+  --pine-deep: oklch(0.96 0.03 205); --pine: oklch(0.87 0.05 205);
+  --moss-deep: oklch(0.80 0.11 150); --teal-deep: oklch(0.82 0.10 210); --teal: oklch(0.80 0.10 205); --terra-deep: oklch(0.82 0.13 55); --terra: oklch(0.80 0.13 55);
+  --warn-deep: oklch(0.84 0.13 82); --alert: oklch(0.74 0.17 33);
+  /* Escala do mapa de calor no escuro: mesmos degraus, luminancia invertida. */
+  --hm-nd: oklch(0.30 0.015 240);
+  --hm-0:  oklch(0.345 0.020 240);
+  --hm-1:  oklch(0.425 0.045 215);
+  --hm-2:  oklch(0.530 0.075 210);
+  --hm-3:  oklch(0.660 0.100 205);
+  --hm-4:  oklch(0.660 0.135 55);
+  --hm-5:  oklch(0.620 0.175 35);
+  color: var(--ink);
+  background: linear-gradient(180deg, oklch(0.20 0.03 240), oklch(0.13 0.03 245)) fixed;
+}
+body.storm .topo-bg{ display:none; }
+body.storm #storm{ display:block; }
+body.storm .panel{ background: var(--surface); -webkit-backdrop-filter: blur(11px) saturate(1.1); backdrop-filter: blur(11px) saturate(1.1); border-color: var(--line); box-shadow: 0 2px 34px oklch(0.10 0.05 250 / 0.55); }
+body.storm .hero, body.storm .risk, body.storm .fc-next, body.storm .verdict{ background: var(--surface); }
+body.storm .gauge.lead{ background: var(--surface-2); }
+body.storm .basin-pano{ background: linear-gradient(180deg, oklch(0.31 0.05 235), oklch(0.19 0.04 245)); }
+body.storm .sbar .track{ background: oklch(0.85 0.05 235 / 0.16); }
+/* Logos ganham tratamento de modo escuro: inverte a luminancia, preserva o matiz da marca */
+body.storm .realiza-logos img{ filter: invert(1) hue-rotate(180deg); }
+
+/* ===== Rede / confiabilidade das reguas ===== */
+.netcard{ margin: 14px 0 2px; padding: 12px 15px; border-radius: var(--r); background: oklch(0.615 0.088 208 / 0.09); border:1px solid oklch(0.47 0.082 212 / 0.24); }
+.netcard.warn{ background: oklch(0.72 0.135 78 / 0.12); border-color: oklch(0.72 0.135 78 / 0.35); }
+.nc-top{ display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 26px; }
+.nc-ttl{ flex:1 1 100%; font-size:0.62rem; font-weight:700; text-transform:uppercase; letter-spacing:0.09em; color:var(--muted); }
+.nc-st{ font-size:0.66rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; }
+.nc-st b{ display:block; margin-top:2px; font-family:var(--font-display); font-size:1.35rem; font-weight:600; line-height:1; color:var(--pine-deep); letter-spacing:0; text-transform:none; }
+.nc-st b small{ font-size:0.7rem; color:var(--ink-2); font-weight:600; }
+.nc-tags{ display:flex; flex-wrap:wrap; gap:5px 8px; margin-top:11px; padding-top:10px; border-top:1px solid var(--line); }
+.nc-tag{ font-size:0.7rem; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line); border-radius:999px; padding:2px 10px; }
+.nc-tag b{ color:var(--pine-deep); font-weight:600; }
+.nc-tag.ok b{ color:var(--moss-deep); }
+.nc-tag.chk{ background: oklch(0.72 0.135 78 / 0.13); border-color: oklch(0.72 0.135 78 / 0.32); } .nc-tag.chk b{ color:var(--warn-deep); }
+.nc-tag.off{ color:var(--muted); }
+.nc-note{ margin:9px 2px 0; font-size:0.72rem; line-height:1.45; color:var(--muted); }
+body.storm .netcard{ background: oklch(0.615 0.088 208 / 0.16); border-color: oklch(0.72 0.06 210 / 0.35); }
+body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
+.chk{ font-size:0.6rem; color: var(--warn-deep); font-weight:700; text-transform:uppercase; letter-spacing:0.03em; }
+.gauge.check{ border-style: dashed; }
+.basin-empty{ font-size:0.86rem; color: var(--muted); margin: 4px 2px; }
+.sbar .track .f.atencao{ background: linear-gradient(90deg, oklch(0.78 0.12 82), var(--warn-deep)); }
+.sbar .track .f.alerta,.sbar .track .f.inund{ background: linear-gradient(90deg, oklch(0.68 0.15 50), var(--alert)); }
+.sbar .track .f.observa{ background: linear-gradient(90deg, var(--teal-soft), var(--teal)); }
+.gauge .g-nm .lv-status{ margin-left:4px; }
