@@ -399,19 +399,8 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
 .qk .sub{ font-size:0.72rem; color:var(--muted); margin-top:2px; }
 .qk.hl{ background: linear-gradient(180deg, oklch(0.72 0.135 78 / 0.09), var(--surface)); border-color: oklch(0.72 0.135 78 / 0.28); }
 
-/* ===== Regua de decisao da enchente: os tres numeros que mandam ===== */
-.flrule{ margin-top:14px; padding:12px 14px; border-radius: var(--r); background: var(--surface-2); border:1px solid var(--line); }
-.flrule .fr-h{ font-size:0.68rem; color:var(--muted); letter-spacing:0.02em; text-transform:uppercase; margin-bottom:9px; }
-.flrule .fr-row{ display:flex; flex-wrap:wrap; gap:10px; }
-.flrule .fr-i{ flex:1 1 118px; min-width:112px; }
-.flrule .fr-i .fk{ font-size:0.7rem; color:var(--muted); }
-.flrule .fr-i .fv{ font-size:1.05rem; font-weight:600; color:var(--pine-deep); line-height:1.15; }
-.flrule .fr-i .fv small{ font-size:0.7rem; font-weight:600; color:var(--ink-2); }
-.flrule .fr-i .fs{ font-size:0.68rem; color:var(--muted); margin-top:1px; }
-.flrule .fr-i.on .fv{ color: var(--alert); }
-.flrule .fr-tx{ font-size:0.78rem; color:var(--ink-2); line-height:1.45; margin-top:10px; padding-top:9px; border-top:1px solid var(--line); }
-.flrule .fr-tx b{ color: var(--pine-deep); font-weight:600; }
-@media(max-width:430px){ .flrule .fr-i{ flex:1 1 46%; min-width:0; } }
+/* Aviso legal, discreto e no fim da pagina */
+.disclaimer{ margin: 18px 2px 4px; font-size:0.72rem; line-height:1.5; color: var(--muted); }
 
 /* ===== Previsao mm ===== */
 .fc-next{ display:flex; gap:14px; align-items:flex-start; margin: 2px 2px 14px; padding: 14px 16px; border-radius: var(--r);
@@ -453,8 +442,7 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
 .sbar .track .f{ height:100%; border-radius:999px; background: linear-gradient(90deg, var(--teal-soft), var(--teal-deep)); }
 .sbar.dry .track .f{ background: var(--line-2); }
 .sbar .val{ font-size:0.76rem; font-weight:600; color:var(--pine-deep); min-width:56px; text-align:right; }
-.confl{ display:flex; gap:10px; align-items:flex-start; margin-top:14px; padding:11px 13px; border-radius:var(--r); background: oklch(0.615 0.088 208 / 0.07); border:1px solid oklch(0.47 0.082 212 / 0.2); }
-.confl p{ margin:0; font-size:0.82rem; color:var(--ink-2); line-height:1.45; } .confl p b{ color:var(--pine-deep); font-weight:600; }
+
 
 /* ===== Rios (reforco) ===== */
 .gauges{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -491,7 +479,7 @@ body.storm{
 body.storm .topo-bg{ display:none; }
 body.storm #storm{ display:block; }
 body.storm .panel{ background: var(--surface); -webkit-backdrop-filter: blur(11px) saturate(1.1); backdrop-filter: blur(11px) saturate(1.1); border-color: var(--line); box-shadow: 0 2px 34px oklch(0.10 0.05 250 / 0.55); }
-body.storm .hero, body.storm .risk, body.storm .fc-next, body.storm .verdict, body.storm .confl{ background: var(--surface); }
+body.storm .hero, body.storm .risk, body.storm .fc-next, body.storm .verdict{ background: var(--surface); }
 body.storm .gauge.lead{ background: var(--surface-2); }
 body.storm .basin-pano{ background: linear-gradient(180deg, oklch(0.31 0.05 235), oklch(0.19 0.04 245)); }
 body.storm .sbar .track{ background: oklch(0.85 0.05 235 / 0.16); }
@@ -581,7 +569,6 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       <h2 class="risk-headline" id="risk-h">Carregando dados das estações e da previsão…</h2>
       <p class="risk-drivers" id="risk-drivers"></p>
       <div class="risk-quick" id="risk-quick"></div>
-      <div class="flrule" id="flood-rule" hidden></div>
     </section>
 
     <!-- CHUVA: PREVISAO + MEDIDA -->
@@ -604,7 +591,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
           <span class="cl"><span class="ln" style="background:var(--terra-deep)"></span> moderada</span>
           <span class="cl"><span class="ln" style="background:var(--alert)"></span> forte (&ge; 8 mm/h)</span>
           <span class="cl"><span class="ln" style="background:var(--warn);opacity:0.5"></span> faixa clara = dia (nascer&rarr;pôr do sol)</span>
-          <span class="cl" style="color:var(--muted)">passe o mouse para ver a hora · linha tracejada = agora; barras esmaecidas já passaram</span>
+          <span class="cl" style="color:var(--muted)">linha tracejada = agora; barras esmaecidas já passaram</span>
         </div>
       </div>
       <div class="chart-block">
@@ -626,15 +613,17 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       </div>
       <div class="chart-block">
         <div class="chart-title"><h3>Panorama por bacia</h3><span class="u">chuva medida sobre cada bacia</span></div>
-        <p class="pano-read" id="pano-read">Chuva medida pelas estações da rede sobre cada bacia, mais a régua de nível do rio.</p>
+        <p class="pano-read" id="pano-read">Chuva medida por estação sobre cada bacia. Pingos = estações, tamanho conforme o acumulado de 24 h; losango = régua de nível. Barras: chuva por estação nas últimas 24 h.</p>
         <div id="basins"></div>
-        <div class="confl">
-          <svg class="vi" width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 C 12.5 6, 16 8.5, 16 12 a6 6 0 1 1 -12 0 C 4 8.5, 7.5 6, 10 2 Z" fill="var(--teal)" opacity="0.9"/></svg>
-          <p><b>Confluência:</b> o Rio Areia deságua no Rolante já no fim da cidade. O Areia sozinho alaga alguns pontos; o Rolante (que vem de Riozinho) alaga outros; quando os dois se juntam, o risco vai para os pontos a jusante, em direção a Taquara.</p>
-        </div>
       </div>
     </section>
   </main>
+
+  <p class="disclaimer">
+    Leituras das estações da rede e previsão do Open-Meteo, publicadas como medidas, sem
+    garantia de disponibilidade ou exatidão. Não é aviso oficial: alertas e orientações de
+    segurança são da Defesa Civil e do Corpo de Bombeiros.
+  </p>
 
 </div>
 
@@ -1221,30 +1210,20 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       ? (RISK.flood.sev>=2?"Enchente grande":"Enchente em curso")
       : ("Risco "+(R.level===0?"baixo":RISKLBL[R.level].toLowerCase()));
     $("#risk-when").textContent = R.drivenBy==="previsto"&&R.futWhen? ("motivado pela previsão · "+diaCurto(R.futWhen)) : "situação agora";
-    const w=R.worst, F=R.flood; let head="", drv="";
-    /* Prosa nao leva codigo de estacao nem parenteses. O texto anterior saia
-       assim: "Maior acumulado da rede em EXFP-AR01 (Rio Areia (alto)). Régua
-       RSRL-BE01: acima da cota — 177%." — parentese dentro de parentese e dois
-       codigos que so quem mantem a rede entende. Codigo fica nos cards de
-       regua e no painel da regra, onde e rotulo, nao frase. */
+    const F=R.flood; let head="", drv="";
+    /* A linha de apoio ficou com UMA informacao: onde choveu mais forte. Todo o
+       resto (rio em relacao ao limite, solo, chuva medida, limite vigente) esta
+       nos cards logo abaixo, em numero. Repetir em prosa so aumentava texto:
+       "O Rio Areia está 54 cm acima do limite" dizia o mesmo que o card
+       "Rio acima do limite · 54 cm" ao lado. */
     const top=NET.rainSt[0];
-    const medida = (R.obs12!=null&&top)
-      ? ("A chuva mais forte caiu sobre "+rioArt(top.reg)+". ")
-      : "";
-    const regua = w
-      ? (w.reg.cotaAlerta
-          ? (R.maxFrac>=1
-              ? (cap(rioArt(w.reg))+" está "+Math.round((R.maxFrac-1)*w.reg.cotaAlerta*100)+" cm acima do limite. ")
-              : (R.maxFrac>=0.9?(cap(rioArt(w.reg))+" está quase no limite. ")
-              : (R.maxFrac>=0.7?(cap(rioArt(w.reg))+" está subindo, mas ainda abaixo do limite. ")
-              : ("Os rios estão em nível normal. "))))
-          : (cap(rioArt(w.reg))+" está "+trendTxt(w)+". "))
-      : "Nenhuma régua de nível com leitura confiável agora. ";
-    // limiar exibido e o VIGENTE (desce com o solo), nao um numero fixo:
-    // dizer "80 mm em 12 h" com o solo saturado era informacao errada.
-    const limTxt = F.ok
-      ? ("Com o solo <b>"+F.solo+"</b>, bastam <b>"+fmt(F.now.lim,0)+" mm em "+F.now.dur+" h</b> para transbordar.")
-      : "";
+    const medida = (R.obs12!=null&&top&&R.obs12>=1)
+      ? ("A chuva mais forte caiu sobre "+rioArt(top.reg)+".")
+      : (NET.trusted.length?"":"Nenhuma régua de nível com leitura confiável agora.");
+    /* O limite vigente e DADO (desce conforme o solo satura) e por isso fica em
+       card, ao lado da chuva medida com que se compara. Fora da prosa: em texto
+       corrido virava promessa ("bastam X para transbordar"), e a pagina nao
+       promete nada — publica medida. */
     /* Quando a enchente esta acontecendo, a manchete e A ENCHENTE. Antes o
        titulo dizia "Chovendo agora" com o rio 77 % acima da cota — a chuva e
        causa, o alagamento e o fato, e e o fato que a pessoa precisa ler
@@ -1260,102 +1239,67 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
                 : (FC&&FC.nowMm>=0.3)?(" Chovendo ~"+fmt(FC.nowMm,1)+" mm/h pela previsão.")
                 : (R.maxTrend>=3)?" A chuva parou, mas o rio ainda está subindo."
                 : "";
+    /* Nenhuma frase orienta conduta nem aponta local. A pagina informa o que as
+       estacoes medem; a decisao e de quem le, e o aviso oficial e da Defesa
+       Civil (dito uma vez no rodape, nao repetido a cada estado). */
     if(F.ok&&F.level>=3){
       head = (F.sev>=2?"Enchente grande na cidade.":"Enchente na cidade.")+chove;
-      drv = (F.sev>=2?"<b>Ruas do centro e saída da cidade sob risco de bloqueio.</b> ":"")+medida+regua+limTxt;
     } else if(R.raining){
       head = "Chovendo agora"+(R.obsNow?(" (~"+fmt(R.obsNow,1)+" mm/h medidos)"):(FC&&FC.nowMm?(" (~"+fmt(FC.nowMm,1)+" mm/h pela previsão)"):""))+".";
-      drv = medida + regua + limTxt;
     } else {
       head="Sem chuva agora.";
-      if(FC&&FC.peakDay&&FC.peakDay.mm>=15){ head+=" Previsão aponta ~"+fmt(FC.peakDay.mm,0)+" mm em "+diaCurto(FC.peakDay.date)+" (prob. "+fmt(FC.peakDay.prob,0)+"%)."; drv=(R.level>=2?"<b>Fique atento</b>: ":"")+"Volume "+(FC.peakDay.mm>=80?"muito alto":FC.peakDay.mm>=40?"alto":"moderado")+" previsto. "; }
-      else { head+=" Tempo firme nos próximos dias."; drv="Sem volume relevante na previsão. "; }
-      drv += medida + regua + limTxt;
+      if(FC&&FC.peakDay&&FC.peakDay.mm>=15) head+=" Previsão aponta ~"+fmt(FC.peakDay.mm,0)+" mm em "+diaCurto(FC.peakDay.date)+" (prob. "+fmt(FC.peakDay.prob,0)+"%).";
+      else head+=" Sem chuva relevante prevista.";
     }
+    drv = medida;
     $("#risk-h").innerHTML=head; $("#risk-drivers").innerHTML=drv;
+    /* Cards = dado puro, na ordem em que a pergunta se faz: veredito, quanto o
+       solo ja guarda, onde esta o rio, quanto choveu, quanto vem. O painel
+       "Como o app decidiu" foi retirado: explicar o metodo na cara do usuario
+       nao ajuda quem quer o numero, e nao cabe a esta pagina orientar conduta.
+       Os numeros dele continuam aqui, como dado. */
     const q=[];
-    q.push(qk("Chuva medida 12 h", R.obs12!=null?fmt(R.obs12,1):"--","mm", R.obs12!=null?("máx. da rede · 24 h: "+fmt(R.obs24,1)+" mm"):"sem estação de chuva", R.obs12!=null&&R.obs12>=25));
-    q.push(qk("Chuva prevista 24 h", FC?fmt(FC.next24,0):"-","mm", (FC&&FC.next24>=20)?"volume relevante":"pela previsão", FC&&FC.next24>=20));
+    if(F.ok){
+      q.push(qk("Chuva no solo", fmt(F.api,0),"mm",
+        "solo "+F.solo+(NET.rain72prior!=null?(" · 3 dias antes: "+fmt(NET.rain72prior,0)+" mm"):""), F.sat>=0.5));
+      const cm = F.rioSt?Math.round((F.rf-1)*F.rioSt.reg.cotaAlerta*100):null;
+      q.push(cm==null
+        ? qk("Rio","--","", "sem régua com leitura confiável", false)
+        : qk(cm>=0?"Rio acima do limite":"Rio abaixo do limite", String(Math.abs(cm)),"cm",
+            rioNome(F.rioSt.reg)+" · "+trendTxt(F.rioSt), F.rf>=0.85));
+    }
+    q.push(qk("Chuva medida 12 h", R.obs12!=null?fmt(R.obs12,1):"--","mm",
+      R.obs12!=null
+        ? ("24 h: "+fmt(R.obs24,1)+" mm"+(F.ok?(" · limite com este solo: "+fmt(F.now.lim,0)+" mm em "+F.now.dur+" h"):""))
+        : "sem estação de chuva",
+      R.obs12!=null&&R.obs12>=25));
+    q.push(qk("Chuva prevista 24 h", FC?fmt(FC.next24,0):"-","mm", "pela previsão", FC&&FC.next24>=20));
     if(FC&&FC.event) q.push(qk("Próxima chuva", diaCurto(FC.event.start), horaCurta(FC.event.start), "~"+fmt(FC.event.mm,0)+" mm no evento", FC.event.mm>=40));
     else q.push(qk("Próxima chuva","sem","evento","nada à vista",false));
     q.unshift(floodCard(F));
     $("#risk-quick").innerHTML=q.join("");
-    renderFloodRule(F);
   }
-  /* Frase em portugues corrido, sem codigo de estacao, sem parenteses e sem
-     razao tecnica. Antes o rodape do card era isto:
-       "rio e chuva — RSRL-BE01 a 147% da cota (1,03 m de 0,70 m) · 111 mm em
-        24 h · limiar 86 mm (solo saturado) · 1,64x o limiar"
-     Nove numeros numa linha, ilegivel de relance — e justamente o momento em
-     que a pessoa tem menos paciencia para ler. Os numeros continuam todos no
-     painel "Regua de decisao" logo abaixo, que e o lugar deles; aqui fica so a
-     frase que se le em dois segundos.
-     Medida em CENTIMETROS ACIMA DO LIMITE em vez de "% da cota": "33 cm acima
-     do limite" e uma imagem, "147 % da cota" e uma conta. */
+  /* Rodape do card diz apenas a BASE do veredito. Os numeros ficam nos cards ao
+     lado ("Rio acima do limite · 54 cm", "Chuva no solo · 142 mm"), entao repetir
+     em frase era texto a mais dizendo o mesmo. */
   function floodCard(F){
-    if(!F.ok) return qk("Enchente na cidade","--","","sem chuva medida ou prevista para calcular",false);
-    const rio = F.rioSt?rioArt(F.rioSt.reg):"o rio";
-    const acima = F.rioSt?Math.round((F.rf-1)*F.rioSt.reg.cotaAlerta*100):0;
-    const acimaTxt = acima>=5?(cap(rio)+" está "+acima+" cm acima do limite"):(cap(rio)+" passou do limite");
+    if(!F.ok) return qk("Enchente na cidade","--","","sem chuva medida ou prevista",false);
     const grande = F.sev>=2;
     // valor longo ("enchente grande") sem unidade ao lado, senao quebra a linha
     const v = grande?"enchente grande":"acontecendo", u = grande?"":"agora";
-    if(F.rio>=3&&F.chuva>=3)
-      return qk("Enchente na cidade",v,u, acimaTxt+", e a chuva já passou do que o solo "+F.solo+" aguentava.", true);
-    if(F.rio>=3)
-      return qk("Enchente na cidade",v,u, acimaTxt+".", true);
-    if(F.chuva>=3)
-      return qk("Enchente na cidade",v,u, "Já choveu mais do que o solo "+F.solo+" aguenta.", true);
+    if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",v,u, "rio acima do limite e chuva acima do que o solo aguenta", true);
+    if(F.rio>=3)             return qk("Enchente na cidade",v,u, "rio acima do limite", true);
+    if(F.chuva>=3)           return qk("Enchente na cidade",v,u, "chuva acima do que o solo aguenta", true);
     /* "iminente" exige CORROBORACAO: extrapolar a subida da regua sozinha da
        falso positivo. Em 28/07 09h a BE01 subia 4,5 cm/h a 80 % da cota e a
        reta batia a cota em 3 h — mas o solo ainda absorvia (razao 0,49) e nao
        houve alagamento. Só vale com a chuva ja em faixa de atencao. */
     if(F.etaRio!=null&&F.etaRio<=6&&F.chuva>=2)
-      return qk("Enchente na cidade","iminente", quandoTxt(F.etaRio), "No ritmo de agora, "+rio+" passa do limite.", true);
+      return qk("Enchente na cidade","iminente", quandoTxt(F.etaRio), "pelo ritmo de subida do rio", true);
     if(F.eta!=null)
       return qk("Enchente na cidade","possível", quandoTxt(F.eta),
-        (F.sevFut>=2?"Pode ser grande. ":"")+"Se a chuva prevista se confirmar, faltam "+fmt(F.now.falta,0)+" mm.", true);
-    return qk("Enchente na cidade","improvável","nas próximas 48 h",
-      "A chuva prevista não chega ao limite para transbordar.", false);
-  }
-  /* Os tres numeros da regra, na ordem em que a pergunta e feita:
-     quanto choveu ANTES -> quanto esta o RIO -> quanto FALTA de chuva.
-     Sem esse painel o veredito e uma caixa-preta e ninguem consegue conferir. */
-  function renderFloodRule(F){
-    const el=$("#flood-rule"); if(!el) return;
-    if(!F.ok){ el.hidden=true; return; }
-    el.hidden=false;
-    const it=(k,v,u,s,on)=>'<div class="fr-i'+(on?' on':'')+'"><div class="fk">'+k+'</div><div class="fv">'+v+(u?' <small>'+u+'</small>':'')+'</div><div class="fs">'+s+'</div></div>';
-    /* Cada bloco: rotulo curto, um numero, e uma legenda que explica o numero
-       em portugues. Sem codigo de estacao, sem "cota", sem razao. */
-    const prev = NET.rain72prior!=null?("nos 3 dias anteriores choveu "+fmt(NET.rain72prior,0)+" mm"):"sem histórico de chuva";
-    /* Rio em CENTIMETROS acima ou abaixo do limite, com sinal. "+33 cm" se le
-       na hora; "147 % da cota" obriga a fazer conta e "cota" e jargao. */
-    const acimaCm = F.rioSt?Math.round((F.rf-1)*F.rioSt.reg.cotaAlerta*100):null;
-    const rioK = acimaCm==null?"Rio":(acimaCm>=0?"Rio acima do limite":"Rio abaixo do limite");
-    const rioV = acimaCm==null?"--":String(Math.abs(acimaCm));
-    const rioS = F.rioSt
-      ? (rioNome(F.rioSt.reg)+" · "+trendTxt(F.rioSt))
-      : (NET.gauges.length?"nenhuma régua com leitura confiável":"sem régua com sinal");
-    /* Enquanto falta chuva, o numero util e quanto falta. Depois de estourar o
-       limite, o numero util e QUANTO PASSOU — e a medida do tamanho da
-       enchente, e era justamente ela que o painel escondia mostrando "0 mm". */
-    const passou = F.now.falta<=0;
-    const faltaK = passou?"Passou do limite":"Falta chover";
-    const faltaV = passou?fmt(F.excesso,0):fmt(F.now.falta,0);
-    const durS = passou
-      ? ("choveu "+fmt(F.now.got,0)+" mm em "+F.now.dur+" h e o solo aguentava "+fmt(F.now.lim,0)+" mm")
-      : ("já choveu "+fmt(F.now.got,0)+" mm em "+F.now.dur+" h e o solo aguenta "+fmt(F.now.lim,0)+" mm");
-    el.innerHTML='<div class="fr-h">Como o app decidiu</div><div class="fr-row">'+
-      it("Chuva no solo", fmt(F.api,0),"mm", "solo "+F.solo+" · "+prev, F.sat>=0.5)+
-      it(rioK, rioV,"cm", rioS, F.rf>=0.85)+
-      it(faltaK, faltaV,"mm", durS, passou||F.now.falta<=15)+
-      '</div>'+
-      '<div class="fr-tx">A regra é simples: <b>quanto mais choveu nos dias anteriores, '+
-      'menos chuva nova a cidade aguenta</b> — o chão encharcado não absorve mais nada e '+
-      'quase tudo vira enxurrada. Em terra seca seriam '+fmt(FFG.filter(f=>f[0]===F.now.dur)[0][1],0)+' mm; '+
-      'com o solo de hoje bastam <b>'+fmt(F.now.lim,0)+' mm</b>. E se a régua marca acima do limite, '+
-      'não tem cálculo: é enchente.</div>';
+        "pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm", true);
+    return qk("Enchente na cidade","improvável","nas próximas 48 h", "chuva prevista abaixo do limite", false);
   }
   function trendTxt(s){ if(!s||s.trend==null) return "sem tendência"; if(s.trend>=1) return "subindo "+fmt(s.trend,1)+" cm/h"; if(s.trend<=-1) return "baixando "+fmt(Math.abs(s.trend),1)+" cm/h"; return "estável"; }
   function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }
@@ -1370,15 +1314,16 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     if(!FC){ $("#fc-next").innerHTML='<div class="tx">Previsão indisponível no momento.</div>'; $("#fc-days").innerHTML=""; return; }
     const ev=FC.event;
     let tx;
-    if(ev){ tx='<div class="ic">'+dropSvg()+'</div><div class="tx">Próxima chuva <b>'+diaCurto(ev.start)+', '+horaCurta(ev.start)+'</b>. Volume estimado do evento: <span class="big">'+fmt(ev.mm,0)+' mm</span>. '+
-      (ev.mm>=80?'Volume de risco de enchente.':ev.mm>=40?'Volume alto, acompanhar de perto.':ev.mm>=15?'Volume moderado.':'Volume pequeno.')+
-      ' Em 3 dias: ~'+fmt(FC.next72,0)+' mm.</div>'; }
-    else tx='<div class="ic">'+dropSvg()+'</div><div class="tx">Sem chuva relevante prevista para os próximos dias. Em 3 dias: ~'+fmt(FC.next72,0)+' mm.</div>';
+    /* Numero, nao adjetivo: "1 mm no evento" informa; "Volume pequeno." era um
+       juizo repetindo o mm que ja estava na frase. As barras do dia ja destacam
+       volume alto por cor. */
+    if(ev) tx='<div class="ic">'+dropSvg()+'</div><div class="tx">Próxima chuva <b>'+diaCurto(ev.start)+', '+horaCurta(ev.start)+'</b> · <span class="big">'+fmt(ev.mm,0)+' mm</span> no evento · ~'+fmt(FC.next72,0)+' mm em 3 dias.</div>';
+    else tx='<div class="ic">'+dropSvg()+'</div><div class="tx">Sem chuva relevante prevista · ~'+fmt(FC.next72,0)+' mm em 3 dias.</div>';
     $("#fc-next").innerHTML=tx;
     const mx=Math.max(10,Math.max.apply(null,FC.days.map(d=>d.mm)));
     $("#fc-days").innerHTML=FC.days.map((d,i)=>{ const dt=new Date(d.date+"T12:00"); const h=Math.round((d.mm/mx)*52); const cls=d.mm>=80?"heavy":d.mm>=20?"wet":""; const today=diaCurto(d.date)==="hoje";
       return '<div class="fc-d '+cls+(today?' today':'')+'"><div class="dow">'+DOW[dt.getDay()]+'</div><div class="dnum">'+String(dt.getDate()).padStart(2,"0")+'/'+String(dt.getMonth()+1).padStart(2,"0")+'</div><div class="fc-bar"><div class="b" style="height:'+Math.max(2,h)+'px"></div></div><div class="mm">'+fmt(d.mm,d.mm>=10?0:1)+'</div><div class="pb">'+fmt(d.prob,0)+'%</div></div>'; }).join("");
-    $("#fc-note").innerHTML="Barras = mm/dia; % = probabilidade. Fonte: Open-Meteo (modelo ECMWF/Best-Match) para Rolante. Legenda de risco de chuva: acima de 80 mm/dia é volume de alerta.";
+    $("#fc-note").innerHTML="Barras = mm/dia; % = probabilidade. Fonte: Open-Meteo (modelo ECMWF/Best-Match) para Rolante.";
   }
   function dropSvg(){ return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 C 12.5 6,16 8.5,16 12 a6 6 0 1 1 -12 0 C 4 8.5,7.5 6,10 2 Z" fill="var(--teal)" opacity="0.9"/><path d="M10 2 C 12.5 6,16 8.5,16 12 a6 6 0 1 1 -12 0 C 4 8.5,7.5 6,10 2 Z" fill="none" stroke="var(--teal-deep)" stroke-width="1"/></svg>'; }
 
@@ -1429,11 +1374,10 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
         '<div class="basin-body">'+
         '<div class="basin-pano"><svg id="cut-'+key+'" viewBox="0 0 360 156" role="img" aria-label="Encosta da bacia do '+m.nome+' com as estações de chuva, onde chove agora e a régua de nível."></svg></div>'+
         '<p class="basin-cap">'+(B.rainingNow.length
-            ? '<b style="color:var(--teal-deep)">Chovendo agora em '+B.rainingNow.map(s=>s.reg.code).join(", ")+'</b> — nuvem, pingos e pulso marcam o trecho do rio sob a chuva. '
+            ? '<b style="color:var(--teal-deep)">Chovendo agora em '+B.rainingNow.map(s=>s.reg.code).join(", ")+'.</b>'
             : (B.rainRecent.length
-                ? '<b>Parou de chover.</b> Choveu há pouco em '+B.rainRecent.map(s=>s.reg.code+" ("+rainPulse(s).h+" h)").join(", ")+' — esses trechos aparecem com chuva esmaecida. '
-                : 'Nenhuma estação da bacia com chuva nas últimas 3 h. '))+
-          'Pingos fixos = estações de chuva (tamanho conforme o acumulado de 24 h); losango = régua de nível. Barras abaixo: chuva medida por estação nas últimas 24 h.</p>'+
+                ? '<b>Parou de chover.</b> Choveu há pouco em '+B.rainRecent.map(s=>s.reg.code+" ("+rainPulse(s).h+" h)").join(", ")+'.'
+                : 'Nenhuma estação da bacia com chuva nas últimas 3 h.'))+'</p>'+
         '<div class="basin-nums">'+
           '<div class="bn">Chovendo agora<b>'+B.rainingNow.length+' <small>de '+B.rainSt.length+(B.rainNowMax?(' · '+fmt(B.rainNowMax,1)+' mm/h'):(B.rainRecent.length?(' · '+B.rainRecent.length+' há pouco'):''))+'</small></b></div>'+
           '<div class="bn">Chuva 24 h medida<b>'+(B.rain24!=null?fmt(B.rain24,1):'-')+' <small>mm (máx.)</small></b></div>'+
