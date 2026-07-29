@@ -105,6 +105,28 @@ const SOIL_K=Math.pow(0.5,1/SOIL_HL);
    evento de cidade — ruas do centro tomadas e saida trancada. Aferido no
    evento de 29/07/2026, cujo pico foi 1,66x o limiar e 177 % da cota. */
 const SEV_GRANDE=1.35;
+/* RECUO (agua saindo). Aferido no fim do evento de 29/07/2026: as 12h15 BRT o
+   usuario confirmou em campo "a enchente ja se foi praticamente toda, so as
+   ruas sujas no centro" — e a pagina dizia "Enchente grande na cidade". A BE01
+   estava em 0,795 m (1,14x o limite de 0,70 m), caindo 6,3 cm/h, com chuva
+   zero nas 4 h anteriores. Duas causas, as duas so aparecem na descida:
+     1) o limite da regua e nivel de AVISO, nao nivel de rua alagada. Na subida
+        ele vale por antecedencia (cruzou 0,70 m as 01h, Grassmann alagou
+        03h30). Na descida nao: a cidade estava alagada com a regua em 1,15 a
+        1,24 m (1,64 a 1,77x) e limpa em 1,14x.
+     2) a memoria de 6 h (pico6) nao tinha saida. Ela existe para um vale de
+        leitura nao apagar o alarme, o que e certo durante o evento; depois de a
+        agua sair ela mantinha a magnitude pregada no pico por 6 h.
+   O recuo exige as tres coisas juntas, e por isso nao dispara no meio do
+   evento: chuva parada, regua caindo e regua bem abaixo do pico de 6 h. As
+   03h BRT de 29/07 (regua caindo de 1,15 para 1,04) chovia forte — a condicao
+   de chuva parada era falsa e o alarme seguiu aceso, sem piscar. */
+const RECUO_SECO_H=3, RECUO_SECO_MM=2, RECUO_QUEDA=2, RECUO_MARGEM=0.15;
+/* Fracao do limite em que a cidade alaga DE FATO, medida na descida: 1,64x com
+   a rotula da Cuca fechada, 1,14x com as ruas ja livres. 1,45 fica no meio,
+   mais perto do lado observado com agua na rua. Vale so em recuo; na subida
+   quem manda continua sendo o limite da regua, que da a antecedencia. */
+const FLOOD_FRAC=1.45;
 
 function soilIndex(obs){ let a=0; for(let i=0;i<obs.length;i++) a=a*SOIL_K+(obs[i]||0); return a; }
 function soilSat(api){ return clamp((api-SOIL_DRY)/(SOIL_WET-SOIL_DRY),0,1); }
@@ -143,10 +165,17 @@ function fcRainAt(hAhead){
   return (best>=0&&bd<=5400000)?(p[best]||0):0;
 }
 
+/* Chuva medida na rede nas ultimas h horas (maximo entre estacoes, ja agregado
+   em netRainSeries). Serve para saber se a chuva parou. */
+function chuvaRecente(hist,h){
+  let s=0; for(let i=Math.max(0,HMAX-h);i<HMAX;i++) s+=hist[i]||0;
+  return s;
+}
 /* CANAL RIO: observacao direta, terminal. So regua validada e com leitura
-   fresca. >=100 % da cota = enchente naquele rio, ponto; >=85 % e subindo,
-   tambem. */
-function canalRio(){
+   fresca. Na SUBIDA, >=100 % da cota = enchente naquele rio, ponto; >=85 % e
+   subindo, tambem. Em RECUO (ver comentario de RECUO_*), o limite da regua
+   deixa de valer como enchente e quem decide e FLOOD_FRAC. */
+function canalRio(secou){
   let frac=0, pico6=0, subida=0, estacao=null, reguas=0;
   APP.NET.trusted.forEach(s=>{
     if(s.cotaFrac==null) return;
@@ -155,11 +184,20 @@ function canalRio(){
     if(s.cotaFrac6!=null&&s.cotaFrac6>pico6) pico6=s.cotaFrac6;
     if((s.trend||0)>subida) subida=s.trend;
   });
+  /* a queda vem da regua que define frac, nao da menor tendencia da rede: uma
+     regua qualquer secando nao descreve o rio que esta acima do limite. */
+  const desce = !!estacao && estacao.trend!=null && estacao.trend<=-RECUO_QUEDA;
+  const recuo = secou && desce && frac < pico6-RECUO_MARGEM;
   let nivel=0;
-  if(frac>=1 || (pico6>=1&&frac>=0.85) || (frac>=0.85&&subida>=3)) nivel=3;
+  if(recuo){
+    if(frac>=FLOOD_FRAC) nivel=3;
+    else if(frac>=1) nivel=2;
+    else if(frac>=0.85) nivel=1;
+  }
+  else if(frac>=1 || (pico6>=1&&frac>=0.85) || (frac>=0.85&&subida>=3)) nivel=3;
   else if(frac>=0.85) nivel=2;
   else if(frac>=0.70) nivel=1;
-  return {nivel, frac, pico6, subida, estacao, reguas};
+  return {nivel, frac, pico6, subida, recuo, estacao, reguas};
 }
 /* CANAL CHUVA, parte futura: hora a hora ate 48 h. O solo tambem satura com a
    chuva prevista, entao o limiar continua descendo enquanto chove — e o
@@ -192,7 +230,12 @@ function etaDoRio(rio){
    evento, nas outras 113 h, o maximo foi 0,74 — o corte de 1,35 para "grande"
    tem 82 % de folga e nao gera falso positivo. */
 function magnitude(agora, rio, pico){
-  const forca=Math.max(agora.ratio, rio.frac, rio.pico6);
+  /* em recuo a magnitude sai do nivel ATUAL, nao do pico de 6 h: depois de a
+     agua sair, pico6 mantinha "enchente grande" na tela por 6 h (as 12h15 de
+     29/07 a regua estava em 1,14x e o card dizia "grande" por causa do 1,81x
+     das 06h). Durante o evento pico6 continua valendo. */
+  const forca=rio.recuo ? Math.max(agora.ratio, rio.frac)
+                        : Math.max(agora.ratio, rio.frac, rio.pico6);
   return {
     forca,
     sev: forca>=SEV_GRANDE?2 : (forca>=1?1:0),
@@ -204,7 +247,7 @@ function cityFlood(){
   const obs=netRainSeries();
   if(!obs&&!APP.FC) return {ok:false, level:0};
   const hist=obs||new Array(HMAX).fill(0);
-  const rio=canalRio();
+  const rio=canalRio(chuvaRecente(hist,RECUO_SECO_H)<RECUO_SECO_MM);
   /* CANAL CHUVA, parte medida: o que ja caiu. */
   const api=soilIndex(hist);
   const agora=ffgRatio(hist,HMAX-1,api);
@@ -213,7 +256,7 @@ function cityFlood(){
   const mag=magnitude(agora, rio, futuro.pico);
   return {ok:true, level:Math.max(rio.nivel,chuva),
           rio:rio.nivel, chuva,
-          rf:rio.frac, rf6:rio.pico6, rise:rio.subida, rioSt:rio.estacao, nGauge:rio.reguas,
+          rf:rio.frac, rf6:rio.pico6, rise:rio.subida, recuo:rio.recuo, rioSt:rio.estacao, nGauge:rio.reguas,
           api, sat:agora.sat, solo:soilLabel(agora.sat),
           now:agora, peak:futuro.pico, peakAt:futuro.picoEm, eta:futuro.eta, etaRio:etaDoRio(rio),
           sev:mag.sev, sevFut:mag.sevFut, forca:mag.forca, excesso:mag.excesso};

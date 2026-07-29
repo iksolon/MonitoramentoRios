@@ -35,6 +35,10 @@ const RISKCLS=["baixo","baixo","atencao","alto"];
 function textoDoSelo(R){
   const F=R.flood;
   if(F&&F.ok&&F.level>=3) return F.sev>=2?"Enchente grande":"Enchente em curso";
+  /* Estado medido, entre a enchente e o normal: o rio ainda esta acima do
+     limite mas descendo, sem chuva. Dizer "Risco atenção" aqui apagava o fato
+     de a agua ainda estar fora da caixa; dizer "Enchente" negava o campo. */
+  if(F&&F.ok&&F.recuo&&F.rf>=1) return "Água baixando";
   return "Risco "+(R.level===0?"baixo":RISKLBL[R.level].toLowerCase());
 }
 function renderSelo(R){
@@ -65,6 +69,7 @@ function fraseDeChuva(R){
 function manchete(R){
   const F=R.flood, chove=fraseDeChuva(R);
   if(F.ok&&F.level>=3) return (F.sev>=2?"Enchente grande na cidade.":"Enchente na cidade.")+chove;
+  if(F.ok&&F.recuo&&F.rf>=1) return "A água está baixando.";
   if(R.raining){
     const quanto = R.obsNow ? (" (~"+fmt(R.obsNow,1)+" mm/h medidos)")
                  : (APP.FC&&APP.FC.nowMm) ? (" (~"+fmt(APP.FC.nowMm,1)+" mm/h pela previsão)")
@@ -141,6 +146,10 @@ function floodCard(F){
   if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",v,u, "rio acima do limite e chuva acima do que o solo aguenta", true);
   if(F.rio>=3)             return qk("Enchente na cidade",v,u, "rio acima do limite", true);
   if(F.chuva>=3)           return qk("Enchente na cidade",v,u, "chuva acima do que o solo aguenta", true);
+  /* Recuo com regua ainda acima do limite: sem esta linha o card caia direto em
+     "improvável", que e falso enquanto a agua nao voltou para a caixa. */
+  if(F.recuo&&F.rf>=1)
+    return qk("Enchente na cidade","baixando","", "rio ainda acima do limite e descendo, sem chuva há 3 h", true);
   /* "iminente" exige CORROBORACAO: extrapolar a subida da regua sozinha da
      falso positivo. Em 28/07 09h a BE01 subia 4,5 cm/h a 80 % da cota e a
      reta batia a cota em 3 h — mas o solo ainda absorvia (razao 0,49) e nao

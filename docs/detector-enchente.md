@@ -84,6 +84,41 @@ f >= 0,70                   -> observação
 A memória de 6 h existe porque uma leitura mais baixa não pode apagar o alarme
 — foi o que derrubou o veredito às 06h no motor antigo.
 
+### Canal RIO — recuo (água saindo)
+
+O limite da régua é nível de **aviso**, não nível de rua alagada. Na subida ele
+vale justamente por isso: a `BE01` cruzou 0,70 m às 01h e o Grassmann alagou às
+03h30 — 2h30 de antecedência. Na **descida** o mesmo número mente: a cidade
+estava alagada com a régua entre 1,15 m e 1,24 m (1,64x a 1,77x) e já estava
+limpa com a régua em 0,795 m (1,14x).
+
+Por isso existe um estado de recuo, que exige as três condições **juntas**:
+
+```
+chuva medida nas últimas 3 h  <  2 mm      (parou de chover)
+tendência da régua que define f  <=  -2 cm/h   (está caindo)
+f  <  f6 - 0,15                            (bem abaixo do pico de 6 h)
+```
+
+Em recuo, duas coisas mudam:
+
+```
+f >= 1,45  -> enchente     (FLOOD_FRAC: onde a cidade alaga de fato)
+f >= 1,00  -> "água baixando"  (atenção; rio ainda fora da caixa)
+f >= 0,85  -> observação
+```
+
+e a **magnitude passa a sair de `f`, não de `f6`** — sem isso a memória de 6 h
+mantinha "enchente grande" na tela por 6 h depois de a água sair.
+
+As três condições são o que impede o recuo de disparar no meio do evento: às
+03h de 29/07 a régua caía de 1,15 m para 1,04 m, mas chovia forte, então a
+condição de chuva parada era falsa e o alarme seguiu aceso sem piscar.
+
+`FLOOD_FRAC = 1,45` fica entre os dois valores observados na descida (1,64 com
+água na rua, 1,14 sem), mais perto do lado com água. Vale **só em recuo**; na
+subida quem manda continua sendo o limite da régua.
+
 ### Canal CHUVA — guia de enchente relâmpago, estilo FFG
 
 Duas peças: um índice de solo, e limiares que descem conforme o solo satura,
@@ -163,12 +198,14 @@ dentro de `Web.Data/wwwroot/serra/`. As contas do detector estão em
 | `FFG` (limiares por duração) | `serra/enchente.js` | `[[3,70,35],[6,95,48],[12,120,62],[24,150,85]]` |
 | `SOIL_HL`, `SOIL_DRY`, `SOIL_WET`, `ETA_H` | `serra/enchente.js` | `48, 40, 140, 48` |
 | `SEV_GRANDE` | `serra/enchente.js` | `1.35` |
+| `RECUO_SECO_H`, `RECUO_SECO_MM`, `RECUO_QUEDA`, `RECUO_MARGEM` | `serra/enchente.js` | `3, 2, 2, 0.15` |
+| `FLOOD_FRAC` | `serra/enchente.js` | `1.45` |
 | `LV_CARRY`, `LV_MAXAGE`, `LV_MINCOV` | `serra/config.js` | `3, 3, 3` |
 | `LEVEL_TRUST` / `LEVEL_CHECK` | `serra/config.js` | `{GLLS, BE01}` / `{AR01}` |
 
 Funções do motor, todas em `serra/enchente.js`: `soilIndex()`, `soilSat()`,
-`ffgRatio()`, `canalRio()`, `projetaChuva()`, `magnitude()`, `cityFlood()`,
-`computeRisk()`. O texto do card de enchente é `floodCard()`, em
+`ffgRatio()`, `chuvaRecente()`, `canalRio()`, `projetaChuva()`, `magnitude()`,
+`cityFlood()`, `computeRisk()`. O texto do card de enchente é `floodCard()`, em
 `serra/painel.js` — é apresentação, não conta.
 
 Quem lê a régua e monta as séries é `serra/dados.js`; os filtros de série
@@ -179,27 +216,35 @@ Quem lê a régua e monta as séries é `serra/dados.js`; os filtros de série
 
 ## 3. Resultado da calibração (o que não pode regredir)
 
-Replay do detector novo sobre as mesmas 121 h de dado real:
+Replay do detector atual sobre 121 h de dado real, hora a hora (varredura de
+24/07 03h a 29/07 15h BRT, servidor de replay + navegador em 420 px):
 
 | Hora (BRT) | Selo | Veredito |
 |---|---|---|
-| 24/07 a 27/07 | Risco baixo | improvável |
-| 28/07 09h–15h | baixo/atenção | improvável (razão 0,49 → 0,76) |
-| 28/07 17h | atenção | **possível amanhã 03h** — 10h30 de antecedência |
+| 24/07 a 27/07 | Risco baixo | improvável (todas as 93 horas) |
+| 28/07 09h–15h | baixo/atenção | improvável |
+| 28/07 16h–22h | atenção | **possível amanhã 03h** — 11h30 de antecedência |
 | 28/07 23h | atenção | possível amanhã 01h, faltam 14 mm |
 | 29/07 00h | **Enchente em curso** | **acontecendo** — 3h30 antes do Grassmann |
-| 29/07 03h | **Enchente grande** | força 1,66 · Grassmann alaga 03h30 |
-| 29/07 06h | Enchente grande | rio a 177%, "a chuva parou, mas o rio ainda está subindo" |
-| 29/07 07h | Enchente grande | segue aceso · rótula da Cuca fechada |
+| 29/07 02h–09h | **Enchente grande** | força ≥ 1,35 · Grassmann alaga 03h30, rótula da Cuca fecha 07h |
+| 29/07 10h–11h | Enchente em curso | rio descendo, ainda chovendo na janela de 3 h |
+| 29/07 12h–15h | **Água baixando** | rio ainda acima do limite e descendo, sem chuva há 3 h |
+
+A virada para "Água baixando" às 12h casa com a observação de campo: às 12h15
+de 29/07 o dono do projeto confirmou "a enchente já se foi praticamente toda,
+só as ruas sujas no centro".
 
 **Critérios de aceitação para qualquer mudança futura:**
 
 1. Dispara "acontecendo" em **29/07 00h ou antes**.
-2. **Não pisca**: uma vez aceso às 00h, segue aceso de 00h a 07h sem voltar.
-3. **Zero falso positivo** nas outras 113 h. Dias 27 e 28 param em "atenção" —
+2. **Não pisca**: uma vez aceso às 00h, segue aceso de 00h a 11h sem voltar.
+3. **Zero falso positivo** nas 93 h de 24/07 a 27/07. Dia 28 para em "atenção" —
    correto, o rio esteve a 84–87% do limite e não houve alagamento reportado.
-4. "enchente grande" só nas horas em que a força passa de 1,35 (02h–07h).
-5. Zero erro de JS e zero overflow horizontal em tela de 420 px.
+4. "enchente grande" só nas horas em que a força passa de 1,35 (02h–09h).
+5. **Sai da enchente pelo recuo, não pelo limite da régua**: às 12h de 29/07 diz
+   "água baixando" com a régua ainda a 1,14x o limite. Dizer "enchente" ali é
+   regressão; dizer "improvável" também.
+6. Zero erro de JS e zero overflow horizontal em tela de 420 px.
 
 ---
 
@@ -349,6 +394,7 @@ calibração de verdade.
 | | |
 |---|---|
 | **Observado** | 03h30 Rio Areia sai da caixa no Grassmann; 07h00 rótula da Cuca intransitável; ruas do centro tomadas |
+| **Fim observado** | 12h15 — "a enchente já se foi praticamente toda, só as ruas sujas no centro" (dono do projeto, em campo) |
 | **Fonte** | Boletins do Corpo de Bombeiros + vídeos da cidade |
 | **Chuva 72 h** | 180,8 mm em três pulsos |
 | **Chuva 24 h (pico)** | 141,3 mm |
@@ -361,3 +407,33 @@ calibração de verdade.
 | **Detector antigo** | "improvável" às 00h e de novo às 06h e 07h |
 | **Detector novo** | "possível" 28/07 17h; "acontecendo" 29/07 00h; "enchente grande" 02h; aceso até 07h |
 | **Commits** | `a07741e` motor, `aed12cd` linguagem, `628dadf` remoção de prosa |
+
+#### Recessão do mesmo evento (o que ela ensinou)
+
+A subida estava calibrada; a descida não. Números medidos na `BE01` (limite
+0,70 m), com a chuva já parada:
+
+| Hora (BRT) | Régua | Fração do limite | Campo |
+|---|---|---|---|
+| 02h | 1,15 m | 1,64x | cidade alagando |
+| 06h | 1,24 m | 1,77x | pico; centro tomado |
+| 07h | 1,15 m | 1,64x | rótula da Cuca fechada |
+| 10h | 0,91 m | 1,29x | não observado |
+| 12h15 | 0,795 m (caindo 6,3 cm/h) | 1,14x | **ruas livres, só sujas** |
+
+Com isso a página dizia "Enchente grande na cidade" às 12h15, por duas causas
+que só existem na descida:
+
+1. `f >= 1` declarava enchente. Correto na subida (dá antecedência), falso na
+   descida: a cidade estava limpa em 1,14x.
+2. A memória `f6` não tinha saída, e mantinha a magnitude pregada no pico de
+   1,81x por 6 h depois de a água sair.
+
+Correção: estado de **recuo** (chuva parada + régua caindo + bem abaixo do pico
+de 6 h), com `FLOOD_FRAC = 1,45` e magnitude por `f`. Ver seção 2.
+
+| | |
+|---|---|
+| **Antes** | 12h15 → "Enchente grande na cidade" (força 1,81 vinda do pico de 6 h) |
+| **Depois** | 12h15 → "Água baixando · rio ainda acima do limite e descendo, sem chuva há 3 h" |
+| **Regressão** | nenhuma: replay hora a hora mantém "acontecendo" às 00h e aceso sem piscar de 00h a 11h |
