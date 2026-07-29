@@ -117,11 +117,13 @@ function cardDeChuvaMedida(R, F){
   return qk("Chuva medida 12 h", R.obs12!=null?fmt(R.obs12,1):"--","mm", detalhe, R.obs12!=null&&R.obs12>=25);
 }
 /* Chuva prevista tambem em 12 h, mesma janela da medida. Abaixo de CHUVA_MIN o
-   card diz "traço": anunciar "1 mm" como chuva prevista da peso a nada. */
+   card diz "quase nada": anunciar "1 mm" como chuva prevista da peso ao que nao
+   e chuva. Nao usar "traço" — e jargao de meteorologia, o dono do projeto leu na
+   tela e perguntou o que era. */
 function cardDeChuvaPrevista(){
   if(!APP.FC) return qk("Chuva prevista 12 h","--","mm","previsão indisponível",false);
   const mm=APP.FC.next12;
-  if(mm<CHUVA_MIN) return qk("Chuva prevista 12 h","traço","", "abaixo de "+CHUVA_MIN+" mm", false);
+  if(mm<CHUVA_MIN) return qk("Chuva prevista 12 h","quase nada","", "menos de "+CHUVA_MIN+" mm em 12 h", false);
   return qk("Chuva prevista 12 h", fmt(mm,0),"mm", "pela previsão", mm>=20);
 }
 /* "Proxima chuva" so anuncia evento que soma CHUVA_MIN ou mais (o corte esta em
@@ -285,10 +287,20 @@ export function renderBasins(){
    numa funcao propria para o renderizador abaixo so montar DOM.
    Preferimos a regua local RSRL-RB02 (dentro da cidade); na falta dela, a
    estacao com dado completo mais proxima dela, nao a mais proxima na lista REG
-   (que tinha estacoes de serra, longe da cidade). */
-const REF_CIDADE="5BA69743261D364A"; // RSRL-RB02
+   (que tinha estacoes de serra, longe da cidade).
+
+   SO ESTACAO DE BAIXADA (klass "local") entra aqui. Temperatura cai perto de
+   6 C por km de altitude, entao estacao de serra mede outro clima, nao o da
+   cidade: a EXRL-MG01 (Morro Grande, 830 m) apareceu no card marcando 12,3 C
+   como se fosse o ar de Rolante (44 m). Ela entrou porque a RB02 saiu da lista
+   de estacoes completas quando o sensor de umidade dela foi excluido, e a serra
+   virou "a mais proxima com dado completo" — proximidade no mapa nao compensa
+   800 m de diferenca de altura. Sem estacao de baixada com sinal, o card diz
+   que nao tem, em vez de publicar a temperatura do morro. */
+const REF_CIDADE="5BA69743261D364A"; // RSRL-RB02, ponte no centro, 44 m
 function escolheReferenciaDoAr(){
-  const cand=REG.map(r=>APP.ST[r.code]).filter(s=>s&&s.live&&s.now.temp!=null);
+  const cand=REG.map(r=>APP.ST[r.code])
+                .filter(s=>s&&s.live&&s.now.temp!=null&&s.reg.klass==="local");
   const completas=cand.filter(s=>s.now.hum!=null&&s.now.press!=null);
   const alvo=REGBY[REF_CIDADE];
   const dist2=s=>{ const dlat=s.reg.lat-alvo.lat, dlng=s.reg.lng-alvo.lng; return dlat*dlat+dlng*dlng; };
@@ -317,8 +329,8 @@ export function renderContext(){
   const {ref, refHum}=escolheReferenciaDoAr();
   const grid=$("#ctx-grid");
   if(!ref){
-    $("#ctx-h").textContent="Ar (sem estação com sinal)";
-    grid.innerHTML='<p class="ctx-vazio">Nenhuma estação com sinal para o contexto atmosférico.</p>';
+    $("#ctx-h").textContent="Ar (sem estação na baixada com sinal)";
+    grid.innerHTML='<p class="ctx-vazio">Nenhuma estação da baixada com sinal agora. As estações de serra ficam entre 430 m e 880 m de altitude e medem outro clima.</p>';
     return;
   }
   const outraFonte = refHum && refHum.reg.code!==ref.reg.code;

@@ -246,7 +246,7 @@ function rainSpreadTxt(cov,tot){
   const last=cov[CH-1];
   let peak={n:0,i:0,mx:0};
   cov.forEach((c,i)=>{ if(c.n>peak.n||(c.n===peak.n&&c.mx>peak.mx)) peak={n:c.n,i:i,mx:c.mx}; });
-  if(!peak.n) return "Nenhuma estação passou de "+fmt(RAIN_WET,1)+" mm/h nas últimas 36 h — no máximo traço de garoa.";
+  if(!peak.n) return "Nenhuma estação passou de "+fmt(RAIN_WET,1)+" mm/h nas últimas 36 h — no máximo uma garoa fina.";
   const frac=peak.n/tot;
   const tipo=frac>=0.8?"<b>chuva geral</b> na região":frac>=0.4?"<b>chuva espalhada</b>, não em toda a rede":"<b>chuva isolada</b>, em poucos pontos";
   const forca=peak.mx>=10?"forte":peak.mx>=5?"moderada":peak.mx>=2?"fraca":"muito fraca";

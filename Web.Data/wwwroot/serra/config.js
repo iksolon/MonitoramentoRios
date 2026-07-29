@@ -25,7 +25,7 @@ export const REG=[
   {id:"9A6EE7B45495BB7F",code:"RSRL-GLLS",lat:-29.590,lng:-50.565,klass:"serra",alt:760,rio:"Rolantinho",bacia:"areia",cotaNormal:0.15,cotaAlerta:2.0},
   {id:"936F7F3769D0B500",code:"EXRL-IN01",lat:-29.550,lng:-50.570,klass:"serra",alt:690,rio:"Rio dos Indios",bacia:"areia"},
   {id:"D01D80E734592AFB",code:"EXRZ-CH01",lat:-29.575,lng:-50.420,klass:"serra",alt:600,rio:"Chuvisca (alto)",bacia:"rolante"},
-  {id:"CEF2144E84EF82A0",code:"EXRL-MG01",lat:-29.590,lng:-50.530,klass:"serra",alt:540,rio:"Mascarada",bacia:"rolante"},
+  {id:"CEF2144E84EF82A0",code:"EXRL-MG01",lat:-29.590,lng:-50.530,klass:"serra",alt:830,rio:"Mascarada",bacia:"rolante"},
   {id:"91661F2504450922",code:"EXRL-BV01",lat:-29.640,lng:-50.460,klass:"serra",alt:470,rio:"Boa Vista",bacia:"rolante"},
   {id:"726A95A4D3247CB4",code:"EXFP-CP01",lat:-29.660,lng:-50.625,klass:"serra",alt:430,rio:"Corticeiras",bacia:"rolante"},
   {id:"48B1162D47EC0FE6",code:"RSRZ-CH01",lat:-29.565,lng:-50.420,klass:"local",alt:130,rio:"Rio Chuvisca",bacia:"rolante",cotaAlerta:1.5},
