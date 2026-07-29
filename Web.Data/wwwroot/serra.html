@@ -629,7 +629,10 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   "use strict";
   const $=(s,r)=>(r||document).querySelector(s);
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const API = new URLSearchParams(location.search).get("api") || ((location.hostname==="localhost"||location.hostname==="127.0.0.1")?"https://rios.bitcoineaqui.com.br":"");  // local usa dados de producao; em prod usa mesma origem
+  /* Sempre mesma origem: em dev isso serve o codigo e os dados desta maquina
+     (o worker MultiServerSync espelha as estacoes de producao). Para comparar
+     com o ar, aponte explicitamente: ?api=https://rios.bitcoineaqui.com.br */
+  const API = new URLSearchParams(location.search).get("api") || "";
   const HMAX=96, CH=36;                 // buckets carregados / mostrados no grafico
 
   /* Registro: coords reais (map.html), limiares reais (rsrl2.html), bacia confirmada pelo usuario.
