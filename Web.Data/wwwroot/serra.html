@@ -406,7 +406,7 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
 .fc-next .tx{ font-size:0.95rem; color: var(--pine-deep); line-height:1.5; }
 .fc-next .tx b{ font-weight:700; }
 .fc-next .big{ font-family: var(--font-display); font-weight:600; font-size:1.35rem; color:var(--teal-deep); }
-.fc-days{ display:grid; grid-template-columns: repeat(7, 1fr); gap:6px; }
+.fc-days{ display:grid; grid-template-columns: repeat(auto-fit, minmax(58px, 1fr)); gap:6px; }
 .fc-d{ text-align:center; padding: 9px 4px 8px; border-radius: var(--r-sm); background: var(--surface-2); border:1px solid var(--line); position:relative; }
 .fc-d .dow{ font-size:0.66rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.03em; }
 .fc-d .dnum{ font-size:0.7rem; color:var(--faint); }
@@ -454,7 +454,7 @@ body.ready .chart-line{ stroke-dashoffset: 0 !important; }
 .gauge .g-spark{ margin-top:8px; } .gauge .g-spark svg{ width:100%; height:34px; display:block; }
 .gauge.lead{ background: linear-gradient(180deg, oklch(0.615 0.088 208 / 0.06), var(--surface)); border-color: oklch(0.47 0.082 212 / 0.28); }
 
-@media (max-width:520px){ .gauges{ grid-template-columns:1fr; } .fc-days{ grid-template-columns: repeat(7, 1fr); gap:3px; } .fc-d{ padding:7px 2px 6px; } .fc-d .b, .fc-bar .b{ width:10px; }
+@media (max-width:520px){ .gauges{ grid-template-columns:1fr; } .fc-days{ grid-template-columns: repeat(7, minmax(0, 1fr)); gap:3px; } .fc-d{ padding:7px 2px 6px; } .fc-d .b, .fc-bar .b{ width:10px; }
   .sbar{ grid-template-columns: 1fr auto; row-gap:4px; }
   .sbar .snm{ grid-column: 1 / -1; white-space:normal; overflow:visible; text-overflow:unset; }
 }
@@ -907,7 +907,9 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
         e.mm+=hp[k]||0;
         e.prob=Math.max(e.prob, rows[k].precipitacaoProb||0);
       }
-      const days=Array.from(dayMap,([date,v])=>({date, mm:v.mm, prob:v.prob}));
+      /* 168 h convertidas para BRT caem em 8 datas (a primeira e a ultima
+         parciais). O painel mostra hoje + 6 dias: corta a cauda parcial. */
+      const days=Array.from(dayMap,([date,v])=>({date, mm:v.mm, prob:v.prob})).slice(0,7);
       let peakDay=null; days.slice(0,6).forEach(x=>{ if(!peakDay||x.mm>peakDay.mm) peakDay=x; });
       const nowMm=hp[startIdx]||0;
       /* o grafico horario leva 3 h de cauda passada: sem isso a linha do
