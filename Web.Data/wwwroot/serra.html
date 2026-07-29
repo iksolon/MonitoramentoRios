@@ -694,6 +694,12 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
      normal na analise. Capacidade (chuva/nivel) vem do dado, nao de lista fixa. */
   const LEVEL_TRUST=new Set(["RSRL-GLLS","RSRL-BE01"]);
   const LEVEL_CHECK=new Set(["RSRL-AR01"]);
+  /* Sensor de umidade da RSRL-RB02 esta descalibrado: media de 16 % nas
+     ultimas 24 h com 45,5 mm de chuva na ultima hora e vizinhas (RB01, BE01,
+     GLLS) todas acima de 50 %. Nao e pico isolado (filtro <5% nao pega), e
+     erro sistematico do sensor — exclui so a umidade dessa estacao, o resto
+     dos dados (nivel, chuva) continua valendo. */
+  const HUM_UNTRUSTED=new Set(["RSRL-RB02"]);
   /* Regua velha nao decide nada: leitura precisa ter no maximo LV_MAXAGE horas
      e cobertura minima na ultima meia dia. A GLLS mandou 1 leitura em 121 h
      (2,04 m = 102 % da cota) e o back-fill espalhava esse valor unico por toda
@@ -820,7 +826,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
         rainR.push(r?num(r.precipitacaoTotal_Hora):null);
         let lv=r?num(r.nivelRio_AVG):null; if(lv!=null&&lv<0)lv=null; lvR.push(lv);
         tempR.push(r?num(r.temperaturaAr_AVG):null);
-        let hh=r?num(r.umidadeAr_AVG):null; if(hh!=null&&hh<5)hh=null; humR.push(hh);
+        let hh=r?num(r.umidadeAr_AVG):null; if(hh!=null&&(hh<5||HUM_UNTRUSTED.has(reg.code)))hh=null; humR.push(hh);
         prR.push(r?num(r.pressaoAr_AVG):null);
       }
       const u=byId[h.id]||{};
@@ -892,7 +898,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
         rain, level, tempH:tempR, humH:humR, pressH:prR,
         nowLevel, trend, rain12, rain24, rain72prior, sinceStart,
         lvMin: nmin(level), lvMax: nmax(level),
-        now:{ rainHora: rain?(lastNonNull(rain)||0):null, rain10:num(u.precipitacao10min), ts:tsOf(u.dataHoraDadosUTC), temp:num(u.temperaturaAr), hum:num(u.umidadeAr), press:num(u.pressaoAr), nivel:nowLevel } };
+        now:{ rainHora: rain?(lastNonNull(rain)||0):null, rain10:num(u.precipitacao10min), ts:tsOf(u.dataHoraDadosUTC), temp:num(u.temperaturaAr), hum:(()=>{ const hv=num(u.umidadeAr); return (hv!=null&&(hv<5||HUM_UNTRUSTED.has(reg.code)))?null:hv; })(), press:num(u.pressaoAr), nivel:nowLevel } };
     });
     ST=out; ST.__anyData=anyData;
     const d=new Date(); gen=String(d.getDate()).padStart(2,"0")+"/"+String(d.getMonth()+1).padStart(2,"0")+"/"+d.getFullYear()+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
@@ -1661,11 +1667,18 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     const dist2=s=>{ const dlat=s.reg.lat-REFPT.lat, dlng=s.reg.lng-REFPT.lng; return dlat*dlat+dlng*dlng; };
     const nearest=arr=>arr.length?arr.slice().sort((a,c)=>dist2(a)-dist2(c))[0]:null;
     const ref=full.find(s=>s.reg.code===REFPT.code)||nearest(full)||cand.find(s=>s.reg.code===REFPT.code)||nearest(cand)||null;
+    /* Umidade tem fonte propria: so 2 das 5 estacoes atmosfericas medem
+       pressao, entao exigir hum+press juntos (full) quase sempre sobra so a
+       RB02 — e foi o sensor dela de umidade que quebrou (media de 16 % com
+       chuva forte caindo). Sem isso o card ficava com "-" em vez de buscar a
+       proxima estacao com umidade valida. */
+    const humCand=cand.filter(s=>s.now.hum!=null);
+    const refHum=humCand.find(s=>s.reg.code===REFPT.code)||nearest(humCand)||ref;
     const grid=$("#ctx-grid");
     if(!ref){ $("#ctx-h").textContent="Ar (sem estação com sinal)"; grid.innerHTML='<p style="color:var(--muted);font-size:0.85rem;grid-column:1/-1">Nenhuma estação com sinal para o contexto atmosférico.</p>'; return; }
-    $("#ctx-h").textContent="Ar em "+ref.reg.code;
+    $("#ctx-h").textContent="Ar em "+ref.reg.code+(refHum&&refHum.reg.code!==ref.reg.code?" (umidade: "+refHum.reg.code+")":"");
     const off=HMAX-CH;
-    const items=[{k:"Temperatura",u:"C",arr:ref.tempH.slice(off),now:ref.now.temp,col:"var(--terra)",d:1},{k:"Umidade",u:"%",arr:ref.humH.slice(off),now:ref.now.hum,col:"var(--teal)",d:0},{k:"Pressão",u:"hPa",arr:ref.pressH.slice(off),now:ref.now.press,col:"var(--granite)",d:0}];
+    const items=[{k:"Temperatura",u:"C",arr:ref.tempH.slice(off),now:ref.now.temp,col:"var(--terra)",d:1},{k:"Umidade",u:"%",arr:refHum?refHum.humH.slice(off):[],now:refHum?refHum.now.hum:null,col:"var(--teal)",d:0},{k:"Pressão",u:"hPa",arr:ref.pressH.slice(off),now:ref.now.press,col:"var(--granite)",d:0}];
     grid.innerHTML=items.map(it=>{ const W=110,Ht=34,pad=3,clean=it.arr.filter(v=>v!=null); let inner="";
       if(clean.length){ const mn=Math.min.apply(null,clean),mx=Math.max.apply(null,clean),rng=(mx-mn)||1,ff=fillGaps(it.arr),xs=i=>pad+i*(W-2*pad)/(ff.length-1),ys=v=>(Ht-pad)-(v-mn)/rng*(Ht-2*pad); inner='<svg viewBox="0 0 '+W+' '+Ht+'" preserveAspectRatio="none" aria-hidden="true"><path class="chart-line" d="'+smoothPath(ff.map((v,i)=>[xs(i),ys(v)]))+'" fill="none" stroke="'+it.col+'" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>'; }
       return '<div class="ctx"><div class="k">'+it.k+'</div><div class="v">'+fmt(it.now,it.d)+' <small>'+it.u+'</small></div>'+inner+'</div>'; }).join("");
