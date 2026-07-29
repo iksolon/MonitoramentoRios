@@ -66,11 +66,28 @@ function frescorDaRegua(nivelCru){
   return {idade, cobertura, fresca};
 }
 /* Leitura instantanea so entra em regua limpa e se coerente com a ULTIMA
-   LEITURA CRUA. Comparar com a serie filtrada garantia rejeicao justo durante
-   subida rapida, que e quando a leitura fresca mais vale. */
-function nivelAgora(suave, nivelCru, instantaneo){
+   LEITURA CRUA (media da hora em curso). Comparar com a serie filtrada
+   garantia rejeicao justo durante subida rapida, que e quando a leitura
+   fresca mais vale — por isso a folga de 0,20 m: cobre o pior caso real de
+   subida dentro da mesma hora.
+   Essa mesma folga deixa passar RUIDO de um pacote unico quando o rio esta
+   comprovadamente caindo: 29/07 21h36 UTC a BE01 reportou 0,72 m (media da
+   hora corrente ate ali 0,654 m, tendencia -2,1 cm/h, sem chuva ha horas) e
+   o proximo pacote, 7 min depois, voltou a 0,648 m — o rio nao inverteu, foi
+   leitura ruim. Sem checagem, isso sozinho virou "rio >= 100 % da cota,
+   ponto" (regra terminal do canal rio, sem memoria nem recuo) e a pagina
+   gritou enchente com o rio descendo ha horas. Quando a tendencia ja
+   confirma queda (mesmo limiar do recuo em enchente.js: -2 cm/h), uma
+   reversao para cima so entra com folga bem mais apertada — o suficiente
+   para arredondamento de sensor, pequena demais para o ruido medido. Fora
+   dessa situacao (subindo, estavel ou tendencia ainda desconhecida) a folga
+   de 0,20 m continua igual — subida real nao pode esperar confirmacao. */
+const REV_QUEDA=2, REV_TOL=0.03;
+function nivelAgora(suave, nivelCru, instantaneo, trend){
   const base=lastNonNull(suave.series), cru=lastNonNull(nivelCru);
-  const aceita = !suave.win && instantaneo!=null && (cru==null || Math.abs(instantaneo-cru)<=0.20);
+  const contraQueda = trend!=null && trend<=-REV_QUEDA && cru!=null && instantaneo>cru;
+  const tol = contraQueda ? REV_TOL : 0.20;
+  const aceita = !suave.win && instantaneo!=null && (cru==null || Math.abs(instantaneo-cru)<=tol);
   return aceita ? instantaneo : base;
 }
 /* Tendencia por Theil-Sen (m/h -> cm/h). Regua suja precisa de janela longa: em
@@ -153,8 +170,8 @@ function montaEstacao(reg, rows, ultimo, temPacoteFresco, startHK, maxHK){
      manda) e subida real passa inteira, porque nenhum valor entra sem ter sido
      medido duas vezes em sequencia. */
   const confirmada = temNivel ? confirmSeries(S.nivel) : null;
-  const nowLevel = regua.fresca ? nivelAgora(suave, S.nivel, num(ultimo.nivelRio)) : null;
   const trend = (nivel && regua.fresca) ? tendenciaDoNivel(suave) : null;
+  const nowLevel = regua.fresca ? nivelAgora(suave, S.nivel, num(ultimo.nivelRio), trend) : null;
   const cota = (regua.fresca && reg.cotaAlerta) ? fracaoDaCota(reg.cotaAlerta, nowLevel, confirmada) : {agora:null, pico6:null};
   return {
     reg,
@@ -287,10 +304,15 @@ function proximoEvento(horas, mm, inicio){
 /* Agrega por dia em horario local (BRT, UTC-3), igual ao
    "timezone=America/Sao_Paulo" da chamada antiga.
    168 h convertidas para BRT caem em 8 datas (a primeira e a ultima parciais).
-   O painel mostra hoje + 6 dias: corta a cauda parcial. */
-function agregaPorDia(horas, mm, rows){
+   O painel mostra hoje + 6 dias: corta a cauda parcial.
+   Comeca em `inicio` (primeira hora ainda valida), nao em 0: a API devolve a
+   janela toda, com horas de HOJE que ja passaram. Somar a partir de 0 juntava
+   chuva ja caida com chuva prevista — "hoje" acumulava a chuva da manha (ja
+   medida, ja no card de "chuva ate agora") e o painel dizia "previsao aponta
+   36 mm hoje" as 18h, quando nao sobrava nenhuma hora de chuva no dia. */
+function agregaPorDia(horas, mm, rows, inicio){
   const porDia=new Map();
-  for(let k=0;k<horas.length;k++){
+  for(let k=inicio;k<horas.length;k++){
     const dia=new Date(new Date(horas[k]).getTime()-3*3600000).toISOString().slice(0,10);
     if(!porDia.has(dia)) porDia.set(dia,{mm:0,prob:0});
     const e=porDia.get(dia);
@@ -319,7 +341,7 @@ export async function loadForecast(){
     const mm=rows.map(r=>r.precipitacao||0);
     const agora=Date.now();
     const inicio=primeiraLinhaValida(horas, agora);
-    const dias=agregaPorDia(horas, mm, rows);
+    const dias=agregaPorDia(horas, mm, rows, inicio);
     /* o grafico horario leva 3 h de cauda passada: sem isso a linha do "agora"
        cai colada no eixo, ja que a serie comeca na hora corrente. */
     const cauda=Math.max(0,inicio-3);
