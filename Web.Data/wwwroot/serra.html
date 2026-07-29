@@ -629,10 +629,18 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   "use strict";
   const $=(s,r)=>(r||document).querySelector(s);
   const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  /* Sempre mesma origem: em dev isso serve o codigo e os dados desta maquina
-     (o worker MultiServerSync espelha as estacoes de producao). Para comparar
-     com o ar, aponte explicitamente: ?api=https://rios.bitcoineaqui.com.br */
-  const API = new URLSearchParams(location.search).get("api") || "";
+  /* Duas bases distintas, porque as duas pontas tem qualidades opostas:
+       - estacoes: producao tem a rede inteira e ao vivo; em dev o banco local
+         so tem o que o MultiServerSync espelhou, entao aponta pra la.
+       - previsao: producao ainda roda a copia antiga (Website/Dados), com
+         LIMIT 0,96 cravado no SQL, e devolve 4 dias. A mesma origem entrega
+         os 7 dias corretos em dev, e em producao aponta pra si mesma.
+     ?api=<host> forca as duas pontas pro mesmo lugar (comparar com o ar);
+     ?api= (vazio) forca as duas pra esta origem. */
+  const apiOverride = new URLSearchParams(location.search).get("api");
+  const isDev = location.hostname==="localhost" || location.hostname==="127.0.0.1";
+  const API    = apiOverride ?? (isDev ? "https://rios.bitcoineaqui.com.br" : "");
+  const API_FC = apiOverride ?? "";
   const HMAX=96, CH=36;                 // buckets carregados / mostrados no grafico
 
   /* Registro: coords reais (map.html), limiares reais (rsrl2.html), bacia confirmada pelo usuario.
@@ -889,7 +897,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   /* ===== previsao (endpoint proprio, alimentado pelo WeatherOpenMeteo worker) ===== */
   async function loadForecast(){
     try{
-      const rows=await fetchJSON(API+"/weather/ext?hours=168");
+      const rows=await fetchJSON(API_FC+"/weather/ext?hours=168");
       if(!rows || !rows.length){ FC=null; return; }
       const ht=rows.map(r=>r.forecastUTC.endsWith("Z")?r.forecastUTC:r.forecastUTC+"Z");
       const hp=rows.map(r=>r.precipitacao||0);
