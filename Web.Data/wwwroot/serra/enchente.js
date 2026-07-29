@@ -200,7 +200,17 @@ function canalRio(secou){
     else if(frac>=1) nivel=2;
     else if(frac>=0.85) nivel=1;
   }
-  else if(frac>=1 || (pico6>=1&&frac>=0.85) || (frac>=0.85&&subida>=3)) nivel=3;
+  /* pico6>=1 mantem "enchente" enquanto uma leitura mais baixa isolada nao
+     pode apagar o alarme (regua suja, degrau de telemetria). Isso so vale
+     ENQUANTO a tendencia ainda nao confirmou queda: com `desce` true (Theil-Sen
+     negativo, nao ruido de uma leitura) o pico de 6 h vira memoria velha, nao
+     evidencia de enchente em curso — foi o que prendeu "enchente grande" na
+     tela com a BE01 ja 5 % abaixo do limite e caindo ha horas, so porque o
+     recuo (que exige queda de 15 pontos do pico) ainda nao tinha vencido a
+     margem. Aferido em 29/07/2026 18h: frac 94,9 %, pico6 108 %, tendencia
+     -2 cm/h, sem chuva — sem o `&&!desce` o motor gritava "acontecendo" com
+     o rio de volta abaixo do limite. */
+  else if(frac>=1 || (pico6>=1&&frac>=0.85&&!desce) || (frac>=0.85&&subida>=3)) nivel=3;
   else if(frac>=0.85) nivel=2;
   else if(frac>=0.70) nivel=1;
   return {nivel, frac, pico6, subida, recuo, estacao, reguas};
