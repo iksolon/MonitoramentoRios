@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rios de Rolante · Nível dos rios, chuva e risco de enchente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="serra.css">
+</head>
+<body>
+<div class="topo-bg" aria-hidden="true"><svg id="topo" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice"></svg></div>
+<canvas id="storm" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <div class="realiza">
+    <span class="realiza-tag">Realização</span>
+    <span class="realiza-rule" aria-hidden="true"></span>
+    <div class="realiza-logos">
+      <a class="rl rl-bea" href="https://bitcoineaqui.com.br" target="_blank" rel="noopener" title="Bitcoin é Aqui! Rolante">
+        <img src="logo-bitcoineaqui.png" width="152" height="210" alt="Bitcoin é Aqui! Rolante" loading="eager" decoding="async">
+      </a>
+      <span class="realiza-sep" aria-hidden="true"></span>
+      <a class="rl rl-acisa" href="https://acisarolante.com" target="_blank" rel="noopener" title="ACISA Rolante e Riozinho">
+        <img src="logo-acisa.png" width="560" height="134" alt="ACISA, Associação do Comércio, Indústria, Serviços e Agropecuária de Rolante e Riozinho" loading="eager" decoding="async">
+      </a>
+    </div>
+  </div>
+  <header class="site-head">
+    <div class="brand">
+      <svg class="mark" viewBox="0 0 40 40" aria-hidden="true">
+        <path d="M2 34 L14 12 L20 22 L26 8 L38 34 Z" fill="var(--pine)"/>
+        <path d="M2 34 L14 12 L20 22 L26 8 L38 34 Z" fill="none" stroke="var(--pine-deep)" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M4 30 C 12 27, 15 33, 22 30 S 34 27, 37 31" fill="none" stroke="var(--teal)" stroke-width="2.2" stroke-linecap="round"/>
+      </svg>
+      <div>
+        <h1>Rios de Rolante</h1>
+        <p>Nível dos rios, chuva e risco de enchente · Rolante, RS</p>
+      </div>
+    </div>
+    <div class="head-live">
+      <div class="clock" id="clock">--:-- BRT</div>
+      <div class="live"><span class="dot pulse"></span> ao vivo</div>
+      <button id="stormBtn" class="storm-btn" type="button" aria-pressed="false">modo tempestade</button>
+    </div>
+  </header>
+
+  <div class="top-row">
+    <div class="netcard" id="net-card" role="status"><div class="nc-top"><div class="nc-ttl">Rede de estações</div></div>Verificando a rede…</div>
+    <div class="netcard" id="ctx-card" role="status">
+      <div class="nc-top"><div class="nc-ttl">Contexto atmosférico</div></div>
+      <div class="ctx-sub" id="ctx-h">Ar na estação de referência</div>
+      <div class="ctx-grid" id="ctx-grid"></div>
+    </div>
+  </div>
+
+  <main>
+    <!-- RISCO -->
+    <section class="panel risk reveal d1" aria-labelledby="risk-h">
+      <div class="risk-top">
+        <span class="risk-badge baixo" id="risk-badge"><span class="pdot"></span><span id="risk-label">avaliando</span></span>
+        <span class="risk-when" id="risk-when"></span>
+      </div>
+      <h2 class="risk-headline" id="risk-h">Carregando dados das estações e da previsão…</h2>
+      <p class="risk-drivers" id="risk-drivers"></p>
+      <div class="risk-quick" id="risk-quick"></div>
+    </section>
+
+    <!-- CHUVA: PREVISAO + MEDIDA -->
+    <section class="panel series reveal d2" aria-labelledby="fc-h" id="fc-sec">
+      <div class="sec-head">
+        <div><div class="eyebrow">Chuva</div><h2 id="fc-h">Chuva: previsão e histórico</h2></div>
+        <span class="hint">Open-Meteo + rede de estações · Rolante</span>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Previsão por dia</h3><span class="u">próximos 7 dias</span></div>
+        <div class="fc-next" id="fc-next"><div class="tx">Carregando previsão…</div></div>
+        <div class="fc-days" id="fc-days"></div>
+        <p class="fc-note" id="fc-note"></p>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Chuva prevista por hora</h3><span class="u">mm/h · 3 h atrás &rarr; próximas 48 h</span></div>
+        <div class="chart-wrap"><svg id="chart-rain" viewBox="0 0 360 172" role="img" aria-label="Chuva prevista por hora para Rolante, das últimas 3 horas às próximas 48 horas."></svg></div>
+        <div class="chart-legend">
+          <span class="cl"><span class="ln ln-fraca"></span> fraca</span>
+          <span class="cl"><span class="ln ln-moderada"></span> moderada</span>
+          <span class="cl"><span class="ln ln-forte"></span> forte (&ge; 8 mm/h)</span>
+          <span class="cl"><span class="ln ln-dia"></span> faixa clara = dia (nascer&rarr;pôr do sol)</span>
+          <span class="cl nota">linha tracejada = agora; barras esmaecidas já passaram</span>
+        </div>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Onde está chovendo</h3><span class="u">mm/h por estação · últimas 36 h</span></div>
+        <div class="chart-wrap"><svg id="chart-rainmap" role="img" aria-label="Mapa de calor da chuva medida por estação em cada hora, com a faixa de abrangência da rede."></svg></div>
+        <p class="chart-read" id="rainmap-read"></p>
+        <div class="chart-legend" id="rainmap-legend"></div>
+      </div>
+    </section>
+
+    <!-- RIOS E BACIAS -->
+    <section class="panel levels reveal d3" aria-labelledby="lv-h">
+      <div class="sec-head">
+        <div><div class="eyebrow">Rios e bacias</div><h2 id="lv-h">Nível dos rios agora</h2></div>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Nível agora</h3><span class="u">réguas · últimas 96 h</span></div>
+        <div class="gauges" id="gauges"></div>
+      </div>
+      <div class="chart-block">
+        <div class="chart-title"><h3>Panorama por bacia</h3><span class="u">chuva medida sobre cada bacia</span></div>
+        <p class="pano-read" id="pano-read">Chuva medida por estação sobre cada bacia. Pingos = estações, tamanho conforme o acumulado de 12 h; losango = régua de nível. Barras: chuva por estação nas últimas 12 h.</p>
+        <div id="basins"></div>
+      </div>
+    </section>
+  </main>
+
+  <p class="disclaimer">
+    Leituras das estações da rede e previsão do Open-Meteo, publicadas como medidas, sem
+    garantia de disponibilidade ou exatidão. Não é aviso oficial: alertas e orientações de
+    segurança são da Defesa Civil e do Corpo de Bombeiros.
+  </p>
+
+</div>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+<script type="module" src="serra/app.js"></script>
+</body>
+</html>
