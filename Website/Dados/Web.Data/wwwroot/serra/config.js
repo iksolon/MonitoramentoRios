@@ -12,7 +12,8 @@
    ?api=<host> forca as duas pontas pro mesmo lugar (comparar com o ar);
    ?api= (vazio) forca as duas pra esta origem. */
 const apiOverride = new URLSearchParams(location.search).get("api");
-const isDev = location.hostname==="localhost" || location.hostname==="127.0.0.1";
+// Verifica ambiente de desenvolvimento, porém exclui o ambiente de validação
+const isDev = (location.hostname === "localhost" || location.hostname === "127.0.0.1") && location.port != 5291;
 export const API    = apiOverride ?? (isDev ? "https://rios.bitcoineaqui.com.br" : "");
 export const API_FC = apiOverride ?? "";
 export const HMAX=96, CH=36;                 // buckets carregados / mostrados no grafico
