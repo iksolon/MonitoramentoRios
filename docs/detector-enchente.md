@@ -152,18 +152,28 @@ dele o máximo em 5 dias foi 0,74.
 
 ### Onde as constantes moram
 
-Todas em `Web.Data/wwwroot/serra.html`:
+O front-end de `serra.html` foi separado em três camadas: o HTML ficou só com a
+estrutura, o estilo em `Web.Data/wwwroot/serra.css` e o comportamento em módulos
+dentro de `Web.Data/wwwroot/serra/`. As contas do detector estão em
+`serra/enchente.js`; os limiares de régua e a lista de confiança, em
+`serra/config.js`.
 
-| Constante | Linha aprox. | Valor |
+| Constante | Arquivo | Valor |
 |---|---|---|
-| `FFG` (limiares por duração) | ~1091 | `[[3,70,35],[6,95,48],[12,120,62],[24,150,85]]` |
-| `SOIL_HL`, `SOIL_DRY`, `SOIL_WET`, `ETA_H` | ~1097 | `48, 40, 140, 48` |
-| `SEV_GRANDE` | ~1102 | `1.35` |
-| `LV_CARRY`, `LV_MAXAGE`, `LV_MINCOV` | ~701 | `3, 3, 3` |
-| `LEVEL_TRUST` / `LEVEL_CHECK` | ~695 | `{GLLS, BE01}` / `{AR01}` |
+| `FFG` (limiares por duração) | `serra/enchente.js` | `[[3,70,35],[6,95,48],[12,120,62],[24,150,85]]` |
+| `SOIL_HL`, `SOIL_DRY`, `SOIL_WET`, `ETA_H` | `serra/enchente.js` | `48, 40, 140, 48` |
+| `SEV_GRANDE` | `serra/enchente.js` | `1.35` |
+| `LV_CARRY`, `LV_MAXAGE`, `LV_MINCOV` | `serra/config.js` | `3, 3, 3` |
+| `LEVEL_TRUST` / `LEVEL_CHECK` | `serra/config.js` | `{GLLS, BE01}` / `{AR01}` |
 
-Funções: `soilIndex()`, `soilSat()`, `ffgRatio()`, `cityFlood()`, `computeRisk()`,
-`floodCard()`.
+Funções do motor, todas em `serra/enchente.js`: `soilIndex()`, `soilSat()`,
+`ffgRatio()`, `canalRio()`, `projetaChuva()`, `magnitude()`, `cityFlood()`,
+`computeRisk()`. O texto do card de enchente é `floodCard()`, em
+`serra/painel.js` — é apresentação, não conta.
+
+Quem lê a régua e monta as séries é `serra/dados.js`; os filtros de série
+(despike Hampel, Theil-Sen, confirmação de duas amostras) estão em
+`serra/serie.js`.
 
 ---
 
@@ -244,27 +254,29 @@ node docs/replay/servidor-replay.js 5099 Web.Data/wwwroot/serra.html
 Varra várias horas e confira: veredito, selo, ausência de erro de JS e
 `scrollWidth == clientWidth` em 420 px de largura.
 
-**Duas armadilhas que custaram tempo:**
+**Três armadilhas que custaram tempo:**
 
 - Instalar o shim de relógio via CDP (`page.evaluateOnNewDocument`) **desanexa o
   frame** depois de algumas dezenas de navegações. Por isso o shim é injetado no
   HTML pelo servidor.
 - O servidor relê o arquivo a cada requisição. Se ele fizer cache, você vai
   testar a versão antiga sem perceber.
+- O servidor precisa servir `serra.css` e `serra/*.js` **como arquivo, com o
+  content-type de javascript**. Enquanto ele devolvia o HTML para qualquer
+  caminho, o navegador recebia HTML no lugar do módulo e a página não subia.
 
 ### 4.5 Depois de editar, sempre
 
 ```bash
-python3 -c "
-import re
-s=open('Web.Data/wwwroot/serra.html',encoding='utf-8').read()
-m=re.findall(r'<script[^>]*>(.*?)</script>', s, re.S)
-open('/tmp/serra_check.js','w',encoding='utf-8').write('\n;\n'.join(m))
-" && node --check /tmp/serra_check.js
+# sintaxe de cada módulo (o comportamento vem em módulos ES, não mais inline)
+for f in Web.Data/wwwroot/serra/*.js; do node --check "$f" || echo "FALHOU: $f"; done
 ```
 
-O arquivo é um HTML com JS inline; um `}` comido não aparece em nenhum lugar
-até a página abrir em branco. Este check é obrigatório.
+
+Um `}` comido não aparece em lugar nenhum até a página abrir em branco. Este
+check é obrigatório. Depois dele, confirme que **todo import resolve**: um nome
+exportado que você renomeou quebra só em tempo de carga, e o sintoma é a página
+em branco sem erro visível no servidor.
 
 ---
 

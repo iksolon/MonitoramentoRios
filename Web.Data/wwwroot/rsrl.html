@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <link rel="preload" href="rsrl.css?r=2" as="style" /> <!-- REVISION ID -->
-    <link rel="preload" href="rsrl.js?r=5" as="script" /> <!-- REVISION ID -->
+    <link rel="preload" href="rsrl.css?r=3" as="style" /> <!-- REVISION ID -->
+    <link rel="preload" href="rsrl.js?r=6" as="script" /> <!-- REVISION ID -->
     <link rel="preload" href="helpers.js?r=1" as="script" /> <!-- REVISION ID -->
 
     <meta charset="UTF-8">
@@ -15,17 +15,24 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="rsrl.css?r=2" /> <!-- REVISION ID -->
+    <link rel="stylesheet" href="rsrl.css?r=3" /> <!-- REVISION ID -->
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script type="text/javascript" src="chart.js"></script>
-    <script type="text/javascript" src="rsrl.js?r=5"></script> <!-- REVISION ID -->
+    <script type="text/javascript" src="rsrl.js?r=6"></script> <!-- REVISION ID -->
     <script type="text/javascript" src="helpers.js?r=1"></script> <!-- REVISION ID -->
 </head>
 <body>
+    <!-- ============================================================
+         AVISO DE MANUTENÇÃO
+         ============================================================ -->
     <!--<div class="ribbon">₿ETA</div>-->
     <div class="aviso-manutencao">⚠️ AVISO: a régua de nível do Areia (AR01) está com a leitura em conferência — use os valores com ressalva. A régua do Rolante (CE02) está fora do ar para manutenção. As estações de chuva da rede seguem medindo normalmente.</div>
     <div id="screen">
+
+        <!-- ============================================================
+             PAINEL SUPERIOR: últimas leituras + mapa
+             ============================================================ -->
         <div id="top">
             <div id="topTable">
                 <h1>Sistema de Monitoramento de Rios</h1>
@@ -50,22 +57,30 @@
             </div>
             <div id="map"></div>
         </div>
-        <hr style="margin-top: 0px;" />
+        <hr class="sep-apos-painel" />
         <div id="bottom">
 
+            <!-- ============================================================
+                 PREVISÃO DO TEMPO
+                 ============================================================ -->
             <h2> Previsão do Tempo para as Próximas Horas </h2>
             <div id="previsaoTempo">
                 <div id="previsaoCards"></div>
-                <div style="text-align: center; margin-top:10px"> <small id="dataHoraColetaPrevisao"></small> <button onclick="carregaPrevisaoEstendida()">Carregar mais</button> </div>
+                <div class="previsao-rodape"> <small id="dataHoraColetaPrevisao"></small> <button id="btnPrevisaoEstendida">Carregar mais</button> </div>
             </div>
 
             <hr />
 
+            <!-- ============================================================
+                 GRÁFICOS HISTÓRICOS POR ESTAÇÃO
+                 O atributo data-estacao é o gancho de clique: veja
+                 ligaEventosPagina() em rsrl.js.
+                 ============================================================ -->
             <div id="dvTodas">
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('5BA69743261D364A')">
+                        <span data-estacao="5BA69743261D364A">
                             <i class="bi-cloud-rain"></i> Chuva no Rio Branco - Rio Branco, Rolante-RS
                         </span>
                     </h3>
@@ -74,7 +89,7 @@
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('9A6EE7B45495BB7F')">
+                        <span data-estacao="9A6EE7B45495BB7F">
                             <i class="bi-water"></i> Nível da água no Arroio da Areia - Alto Areia, Rolante-RS
                         </span>
                     </h3>
@@ -83,7 +98,7 @@
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('04109F675953A131')">
+                        <span data-estacao="04109F675953A131">
                             <i class="bi-water"></i> Nível da água no Arroio Boa Esperança - Boa Esperança, Rolante-RS
                         </span>
                     </h3>
@@ -91,7 +106,7 @@
                 </div>
 
                 <!--<div class="cdvChart">
-                    <h3><span onclick="abrirEstacao('48B1162D47EC0FE6')"><i class="bi-water"></i> Chuvisqueiro - Chuvisqueiro, Riozinho-RS</span></h3>
+                    <h3><span data-estacao="48B1162D47EC0FE6"><i class="bi-water"></i> Chuvisqueiro - Chuvisqueiro, Riozinho-RS</span></h3>
                     <canvas id="chtCH01"></canvas>
                 </div>-->
 
@@ -99,6 +114,9 @@
 
             <hr />
 
+            <!-- ============================================================
+                 SOBRE O SISTEMA
+                 ============================================================ -->
             <div id="divSobre">
                 <h2> Sobre o Sistema </h2>
                 <p>O sistema de monitoramento dos rios é uma iniciativa do <strong>Projeto ₿itcoin é Aqui de Rolante-RS</strong></p>
@@ -122,20 +140,25 @@
                     </a>.
                 </p> <p>
                     Apoie o projeto com doações:
-                    <a href="https://coinos.io/enchenterolante" style="vertical-align: middle" target="_blank">
-                        <img src='coinos.svg' style='height:24px;margin-left:4px;vertical-align: middle;'>
+                    <a href="https://coinos.io/enchenterolante" class="link-doacao" target="_blank">
+                        <img src="coinos.svg" class="icone-inline">
                     </a>
                 </p>
             </div>
             <br><br><br>
         </div>
 
-        <hr style="margin-bottom: 1px;" />
-        <div style="text-align: center; padding-bottom: 10px;"> <small id="versaoSistema">Versão do Sistema: 1.0+{{GIT_HASH}}[B]</small> </div>
+        <!-- ============================================================
+             RODAPÉ: versão do sistema
+             ============================================================ -->
+        <hr class="sep-rodape" />
+        <div class="rodape-versao"> <small id="versaoSistema">Versão do Sistema: 1.0+{{GIT_HASH}}[B]</small> </div>
     </div>
 
     <script>
-        /* Inicializa Gráfico */
+        /* ============================================================
+           MAPA
+           ============================================================ */
         let lstEstacoesMapa = [];
         var map = L.map('map', {
             maxZoom: 13,
@@ -154,14 +177,24 @@
         adicionaEstacao(lstEstacoesMapa, -29.640, -50.530, noSigSvg, "CF98FCFA7E9EE7C1"); // RSRL-AR01
         adicionaEstacao(lstEstacoesMapa, -29.640, -50.560, noSigSvg, "2CAED8D9CB62CEB5"); // RSRL-BV01
 
-        /* Dados */
+        /* ============================================================
+           DADOS
+           ============================================================ */
         carregaPrevisao(false);
         montaTabelaEstacoes(lstEstacoesMapa); // Atualiza Bolha no mapa
-        /* Gráficos */
+
+        /* ============================================================
+           GRÁFICOS
+           ============================================================ */
         carregaHistoricoGrafico('04109F675953A131', 'chtBE01', 0.09, 0.5);
         carregaHistoricoGrafico('9A6EE7B45495BB7F', 'chtGLLS', 0.15, 2.0);
         carregaHistoricoGrafico('48B1162D47EC0FE6', 'chtCH01', null, 1.5);
         carregaHistoricoGrafico('5BA69743261D364A', 'chtRK01', null, 120.0);
+
+        /* ============================================================
+           EVENTOS
+           ============================================================ */
+        ligaEventosPagina();
 
     </script>
 </body>

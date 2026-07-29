@@ -1,8 +1,8 @@
 ﻿<!DOCTYPE html>
 <html>
 <head>
-    <link rel="preload" href="rsrl.css?r=2" as="style" /> <!-- REVISION ID -->
-    <link rel="preload" href="rsrl.js?r=7" as="script" /> <!-- REVISION ID -->
+    <link rel="preload" href="rsrl.css?r=3" as="style" /> <!-- REVISION ID -->
+    <link rel="preload" href="rsrl.js?r=8" as="script" /> <!-- REVISION ID -->
     <link rel="preload" href="helpers.js?r=1" as="script" /> <!-- REVISION ID -->
 
     <meta charset="UTF-8">
@@ -15,25 +15,50 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link rel="stylesheet" href="rsrl.css?r=2" /> <!-- REVISION ID -->
+    <link rel="stylesheet" href="rsrl.css?r=3" /> <!-- REVISION ID -->
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script type="text/javascript" src="chart.js"></script>
-    <script type="text/javascript" src="rsrl.js?r=7"></script> <!-- REVISION ID -->
+    <script type="text/javascript" src="rsrl.js?r=8"></script> <!-- REVISION ID -->
     <script type="text/javascript" src="helpers.js?r=1"></script> <!-- REVISION ID -->
 
     <style>
+        /* ============================================================
+           TABELA FIXA DE PONTOS DE LEITURA (exclusiva desta página)
+           ============================================================ */
+
+        /* Tabela com as linhas escritas no markup, não montadas por JS.
+           A largura mínima evita que as colunas de dado se sobreponham. */
+        .tb-pontos-leitura {
+            padding-top: 5px;
+            min-width: 410px;
+        }
+
+        /* Linha que serve de cabeçalho de grupo dentro do corpo da tabela
+           ("Chuva Acumulada", "Nível dos Rios"). */
         .tbHeaderRow {
             text-align: left;
             font-weight: bold;
         }
+
+        /* Cabeçalho de coluna de valor: centralizado sobre o dado
+           (desfaz o alinhamento à esquerda de .tbHeaderRow). */
+        .tbHeaderRow.th-valor {
+            text-align: center;
+        }
     </style>
 </head>
 <body>
+    <!-- ============================================================
+         AVISOS FIXOS
+         ============================================================ -->
     <div class="aviso-manutencao">⚠️ AVISO: a régua de nível do Areia (AR01) está com a leitura em conferência — use os valores com ressalva. A régua do Rolante (CE02) está fora do ar para manutenção. As estações de chuva da rede seguem medindo normalmente.</div>
     <div class="ribbon">₿ETA</div>
 
     <div id="screen">
+        <!-- ============================================================
+             CABEÇALHO
+             ============================================================ -->
         <div>
             <h1>Sistema de Monitoramento de Rios de Rolante</h1>
             <h2>
@@ -43,11 +68,16 @@
             </h2>
         </div>
 
-        <hr style=" margin-bottom: 0px;" />
+        <hr class="sep-antes-painel" />
 
+        <!-- ============================================================
+             PAINEL SUPERIOR: pontos de leitura + mapa
+             Os spans spn_* são preenchidos por
+             exibeDadosEstacaoTabelaChuva/Rio() em rsrl.js.
+             ============================================================ -->
         <div id="top">
             <div id="topTable">
-                <table style="padding-top: 5px; min-width: 410px" id="ultimasLeituras">
+                <table id="ultimasLeituras" class="tb-pontos-leitura">
                     <thead>
                         <!--<tr>
                             <th>Ponto de Leitura</th>
@@ -63,8 +93,8 @@
                             <td class="tbHeaderRow">Chuva Acumulada</td>
                             <td class="tbHeaderRow">Distância</td>
                             <td class="tbHeaderRow"></td>
-                            <td class="tbHeaderRow" style="text-align: center">Chuva 24h</td>
-                            <td class="tbHeaderRow" style="text-align: center">Alerta</td>
+                            <td class="tbHeaderRow th-valor">Chuva 24h</td>
+                            <td class="tbHeaderRow th-valor">Alerta</td>
                         </tr>
                         <tr>
                             <td>Rio Branco</td>
@@ -86,8 +116,8 @@
                             <td class="tbHeaderRow">Nível dos Rios</td>
                             <td></td>
                             <td></td>
-                            <td class="tbHeaderRow" style="text-align: center">Nível</td>
-                            <td class="tbHeaderRow" style="text-align: center">Alerta</td>
+                            <td class="tbHeaderRow th-valor">Nível</td>
+                            <td class="tbHeaderRow th-valor">Alerta</td>
 
                         </tr>
                         <tr>
@@ -127,22 +157,30 @@
             </div>
             <div id="map"></div>
         </div>
-        <hr style="margin-top: 0px;" />
+        <hr class="sep-apos-painel" />
         <div id="bottom">
 
+            <!-- ============================================================
+                 PREVISÃO DO TEMPO
+                 ============================================================ -->
             <h2> Previsão do Tempo para as Próximas Horas </h2>
             <div id="previsaoTempo">
                 <div id="previsaoCards"></div>
-                <div style="text-align: center; margin-top:10px"> <small id="dataHoraColetaPrevisao"></small> <button onclick="carregaPrevisaoEstendida()">Carregar mais</button> </div>
+                <div class="previsao-rodape"> <small id="dataHoraColetaPrevisao"></small> <button id="btnPrevisaoEstendida">Carregar mais</button> </div>
             </div>
 
             <hr />
 
+            <!-- ============================================================
+                 GRÁFICOS HISTÓRICOS POR ESTAÇÃO
+                 O atributo data-estacao é o gancho de clique: veja
+                 ligaEventosPagina() em rsrl.js.
+                 ============================================================ -->
             <div id="dvTodas">
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('5BA69743261D364A')">
+                        <span data-estacao="5BA69743261D364A">
                             <i class="bi-cloud-rain"></i> Chuva no Rio Branco - Rio Branco, Rolante-RS
                         </span>
                     </h3>
@@ -150,7 +188,7 @@
                 </div>
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('CEF2144E84EF82A0')">
+                        <span data-estacao="CEF2144E84EF82A0">
                             <i class="bi-cloud-rain"></i> Chuva no Morro Grande, Rolante-RS
                         </span>
                     </h3>
@@ -159,7 +197,7 @@
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('CF98FCFA7E9EE7C1')">
+                        <span data-estacao="CF98FCFA7E9EE7C1">
                             <i class="bi-water"></i> Nível da água no Rio Rolante - Alto Rolante, Rolante-RS
                         </span>
                     </h3>
@@ -168,7 +206,7 @@
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('9A6EE7B45495BB7F')">
+                        <span data-estacao="9A6EE7B45495BB7F">
                             <i class="bi-water"></i> Nível da água no Arroio da Areia - Alto Areia, Rolante-RS
                         </span>
                     </h3>
@@ -177,7 +215,7 @@
 
                 <div class="cdvChart">
                     <h3>
-                        <span onclick="abrirEstacao('04109F675953A131')">
+                        <span data-estacao="04109F675953A131">
                             <i class="bi-water"></i> Nível da água no Arroio Boa Esperança - Boa Esperança, Rolante-RS
                         </span>
                     </h3>
@@ -187,6 +225,9 @@
 
             <hr />
 
+            <!-- ============================================================
+                 SOBRE O SISTEMA
+                 ============================================================ -->
             <div id="divSobre">
                 <h2> Sobre o Sistema </h2>
                 <p>
@@ -214,20 +255,25 @@
                     </a>.
                 </p> <p>
                     Apoie o Projeto com doações:
-                    <a href="https://coinos.io/bitcoineaqui" style="vertical-align: middle" target="_blank">
-                        <img src='coinos.svg' style='height:24px;margin-left:4px;vertical-align: middle;'>
+                    <a href="https://coinos.io/bitcoineaqui" class="link-doacao" target="_blank">
+                        <img src="coinos.svg" class="icone-inline">
                     </a>
                 </p>
             </div>
             <br><br><br>
         </div>
 
-        <hr style="margin-bottom: 1px;" />
-        <div style="text-align: center; padding-bottom: 10px;"> <small id="versaoSistema">Versão do Sistema: 1.0+{{GIT_HASH}}[B]</small> </div>
+        <!-- ============================================================
+             RODAPÉ: versão do sistema
+             ============================================================ -->
+        <hr class="sep-rodape" />
+        <div class="rodape-versao"> <small id="versaoSistema">Versão do Sistema: 1.0+{{GIT_HASH}}[B]</small> </div>
     </div>
 
     <script>
-        /* Inicializa Gráfico */
+        /* ============================================================
+           MAPA
+           ============================================================ */
         let lstEstacoesMapa = [];
         var map = L.map('map', {
             maxZoom: 13,
@@ -247,7 +293,9 @@
         adicionaEstacao(lstEstacoesMapa, -29.640, -50.560, noSigSvg, "2CAED8D9CB62CEB5"); // RSRL-BV01
         adicionaEstacao(lstEstacoesMapa, -29.585, -50.530, noSigSvg, "CEF2144E84EF82A0"); // EXRL-MG01
 
-        /* Dados */
+        /* ============================================================
+           DADOS
+           ============================================================ */
         carregaPrevisaoAgrupado();
         atualizaMapa(lstEstacoesMapa); // Atualiza Bolha no mapa
 
@@ -259,13 +307,20 @@
         exibeDadosEstacaoTabelaRio('RSRLBE01', '04109F675953A131');
         exibeDadosEstacaoTabelaRio('RSRLCH01', '48B1162D47EC0FE6');
 
-        /* Gráficos */
+        /* ============================================================
+           GRÁFICOS
+           ============================================================ */
         carregaHistoricoGrafico('04109F675953A131', 'chtBE01', 0.09, 0.5);
         carregaHistoricoGrafico('9A6EE7B45495BB7F', 'chtGLLS', 0.15, 2.0);
         carregaHistoricoGrafico('48B1162D47EC0FE6', 'chtCH01', null, 1.5);
         carregaHistoricoGrafico('CF98FCFA7E9EE7C1', 'chtAR01', null, null);
         carregaHistoricoGrafico('5BA69743261D364A', 'chtRB02', null, 120.0);
         carregaHistoricoGrafico('CEF2144E84EF82A0', 'chtMG01', null, 120.0);
+
+        /* ============================================================
+           EVENTOS
+           ============================================================ */
+        ligaEventosPagina();
 
     </script>
 </body>

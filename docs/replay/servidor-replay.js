@@ -14,22 +14,33 @@
  *
  * Dados: /tmp/riosreplay/fixture.json, gerado por baixar-dados.py.
  *
- * Duas decisoes que parecem detalhe e nao sao:
+ * Tres decisoes que parecem detalhe e nao sao:
  *
  *  1. O shim de relogio e injetado no PROPRIO HTML. Instalar via CDP
  *     (page.evaluateOnNewDocument) desanexa o frame depois de algumas dezenas
  *     de navegacoes, e a varredura morre no meio.
  *  2. A pagina e RELIDA do disco a cada requisicao. Se fizer cache, voce edita
  *     o serra.html e continua testando a versao antiga sem perceber.
+ *  3. O CSS e os modulos JS sao servidos como ARQUIVO, com o content-type
+ *     certo. Antes qualquer caminho caia no HTML: quando a pagina passou a
+ *     carregar serra.css e serra/*.js, o navegador recebia HTML no lugar do
+ *     modulo e a pagina nao subia. Modulo ES exige MIME de javascript.
  *
  * Ver docs/detector-enchente.md, secao 4.
  */
 const http = require("http");
 const fs = require("fs");
+const path = require("path");
 
 const PORT = Number(process.argv[2] || 5099);
 const PAGEPATH = process.argv[3] || "Web.Data/wwwroot/serra.html";
+const RAIZ = path.resolve(path.dirname(PAGEPATH));   // wwwroot: de onde saem css/js
 const FXPATH = process.env.RIOS_FIXTURE || "/tmp/riosreplay/fixture.json";
+
+const TIPO = {".js":"text/javascript; charset=utf-8", ".css":"text/css; charset=utf-8",
+              ".json":"application/json; charset=utf-8", ".svg":"image/svg+xml",
+              ".png":"image/png", ".jpg":"image/jpeg", ".webp":"image/webp",
+              ".ico":"image/x-icon", ".woff2":"font/woff2"};
 
 if (!fs.existsSync(FXPATH)) {
   console.error("fixture nao encontrada: " + FXPATH);
@@ -69,6 +80,20 @@ http.createServer((req, res) => {
   }
   if (u.pathname === "/weather/ext") {
     return json(FX.forecast.filter((r) => Date.parse(r.forecastUTC + "Z") / 3600000 >= hk));
+  }
+
+  /* Arquivo real dentro da wwwroot (serra.css, serra/*.js, imagens): serve como
+     arquivo, com o content-type certo. Sem isso o modulo ES chegava como HTML.
+     Confere que o caminho resolvido nao escapa da raiz. */
+  if (u.pathname !== "/" && !u.pathname.endsWith(".html")) {
+    const alvo = path.resolve(RAIZ, "." + u.pathname);
+    if (alvo.startsWith(RAIZ + path.sep) && fs.existsSync(alvo) && fs.statSync(alvo).isFile()) {
+      res.writeHead(200, {
+        "content-type": TIPO[path.extname(alvo)] || "application/octet-stream",
+        "cache-control": "no-store"
+      });
+      return res.end(fs.readFileSync(alvo));
+    }
   }
 
   const clock = u.searchParams.get("clock");

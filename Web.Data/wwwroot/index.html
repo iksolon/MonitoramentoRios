@@ -4,29 +4,53 @@
     <meta charset="UTF-8">
     <title>Sistema de Monitoramento dos Rios</title>
 
+    <!-- ============================================================
+         COMPORTAMENTO
+         Esta página não mostra nada: ela só escolhe o destino e vai.
+         ============================================================ -->
     <script>
-        checkDomain();
-        function checkDomain() {
-            let domain = window.location.hostname;
-            console.log(domain);
-            if (domain.includes("bitcoineaqui")) {
+        /* ---------- Destino ---------- */
+        function paginaInicialDoDominio(dominio) {
+            if (dominio.includes("bitcoineaqui")) {
                 console.log("BitcoinEAqui>RSRL");
-                window.location.href = "serra.html";
-                return;
+                return "serra.html";
             }
 
             // default
             console.log("DEF>RSRL");
-            window.location.href = "serra.html";
+            return "serra.html";
         }
+
+        /* ---------- Redirecionamento ---------- */
+        function redirecionaParaPaginaInicial() {
+            const dominio = window.location.hostname;
+            console.log(dominio);
+            window.location.href = paginaInicialDoDominio(dominio);
+        }
+
+        /* ---------- Init ---------- */
+        redirecionaParaPaginaInicial();
     </script>
+
+    <!-- ============================================================
+         APARÊNCIA
+         Tela de espera que aparece durante o redirecionamento.
+         ============================================================ -->
     <style>
+        /* --- Página --- */
+        .tela-espera {
+            background-color: darkslategray;
+        }
+
+        /* --- Área central --- */
         .content {
             height: 300px;
             display: flex;
             justify-content: space-around;
             align-items: center;
         }
+
+        /* --- Indicador de carregamento --- */
         .loader {
             width: 48px;
             height: 48px;
@@ -49,7 +73,7 @@
         }
     </style>
 </head>
-<body style="background-color: darkslategray">
+<body class="tela-espera">
     <div class="content">
         <span class="loader"></span>
     </div>
