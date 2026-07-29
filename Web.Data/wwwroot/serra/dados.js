@@ -6,7 +6,7 @@
 import { APP } from "./estado.js";
 import { API, API_FC, HMAX, REG, REGBY, BACIAS, LEVEL_TRUST, LEVEL_CHECK,
          HUM_UNTRUSTED, LV_MAXAGE, LV_MINCOV } from "./config.js";
-import { fmt, num, sum, mean, tsOf, lastNonNull, nmin, nmax, hkLabel, fetchJSON,
+import { fmt, num, sum, tsOf, lastNonNull, nmin, nmax, hkLabel, fetchJSON,
          diaMes, horaMin } from "./util.js";
 import { ffill, despike, smoothLevel, confirmSeries, robustSlope } from "./serie.js";
 /* Umidade que a interface pode publicar. Duas regras num lugar so: leitura
@@ -234,7 +234,6 @@ export function aggregateBasins(){
     APP.BAS[b.key]={ meta:b, all, live, rainSt, levelSt, trusted, gauge, rainingNow, rainRecent,
       rainNowMax:maxOf(rainSt,s=>rainNowOf(s)),
       rain12:maxOf(rainSt,s=>s.rain12), rain24:maxOf(rainSt,s=>s.rain24),
-      rain24avg:rainSt.length?mean(rainSt.map(s=>s.rain24||0)):null,
       offline:all.filter(s=>!s.live), totalCount:all.length };
   });
 }
@@ -254,27 +253,36 @@ export function netSummary(){
 }
 
 /* ===== previsao (endpoint proprio, alimentado pelo WeatherOpenMeteo worker) ===
-   Chuva abaixo de PREVISAO_MIN e traco, nao evento. */
-const PREVISAO_MIN=0.2, EVENTO_PAUSA_H=6;
+   Chuva abaixo de PREVISAO_MIN e traco, nao evento. E um punhado de horas de
+   0,1 a 0,2 mm somando menos de EVENTO_MIN tambem nao e evento: o painel
+   anunciava "Proxima chuva hoje 17h · ~0 mm no evento", que ocupa o card mais
+   visivel da previsao para dizer que nao vai chover. So conta chuva que da para
+   sentir. */
+const PREVISAO_MIN=0.2, EVENTO_PAUSA_H=6, EVENTO_MIN=5;
 
 /* Primeira linha que ainda vale como "agora": a hora corrente ou a anterior. */
 function primeiraLinhaValida(horas, agora){
   for(let i=0;i<horas.length;i++) if(new Date(horas[i]).getTime()>=agora-3600000) return i;
   return 0;
 }
-/* Proximo evento de chuva: comeca na primeira hora molhada e segue somando ate
-   dar EVENTO_PAUSA_H horas secas seguidas. */
+/* Proxima chuva significativa: cada candidato comeca na primeira hora molhada e
+   segue somando ate dar EVENTO_PAUSA_H horas secas seguidas; candidato que nao
+   alcanca EVENTO_MIN e descartado e a busca continua na hora seguinte a ele. */
 function proximoEvento(horas, mm, inicio){
   let i=inicio;
-  while(i<horas.length && (mm[i]||0)<PREVISAO_MIN) i++;
-  if(i>=horas.length) return null;
-  let total=0, seco=0, fim=i;
-  for(let j=i;j<horas.length;j++){
-    const p=mm[j]||0;
-    if(p>=PREVISAO_MIN){ total+=p; fim=j; seco=0; }
-    else { seco++; if(seco>=EVENTO_PAUSA_H) break; }
+  while(i<horas.length){
+    while(i<horas.length && (mm[i]||0)<PREVISAO_MIN) i++;
+    if(i>=horas.length) return null;
+    let total=0, seco=0, fim=i, j=i;
+    for(;j<horas.length;j++){
+      const p=mm[j]||0;
+      if(p>=PREVISAO_MIN){ total+=p; fim=j; seco=0; }
+      else { seco++; if(seco>=EVENTO_PAUSA_H) break; }
+    }
+    if(total>=EVENTO_MIN) return {start:horas[i], end:horas[fim], mm:total};
+    i=fim+1;
   }
-  return {start:horas[i], end:horas[fim], mm:total};
+  return null;
 }
 /* Agrega por dia em horario local (BRT, UTC-3), igual ao
    "timezone=America/Sao_Paulo" da chamada antiga.
@@ -317,6 +325,10 @@ export async function loadForecast(){
     const cauda=Math.max(0,inicio-3);
     APP.FC={
       event: proximoEvento(horas, mm, inicio),
+      /* 12 h e a janela FIXA dos cards: medida e prevista na mesma duracao, para
+         dar numero comparavel de um dia para o outro. next24 e next72 ficam para
+         o motor de risco, que e calibrado em outras duracoes. */
+      next12: sum(mm.slice(inicio, inicio+12)),
       next24: sum(mm.slice(inicio, inicio+24)),
       next72: sum(mm.slice(inicio, inicio+72)),
       days: dias,

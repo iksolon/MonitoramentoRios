@@ -100,18 +100,36 @@ function cardDeRio(F){
   return qk(cm>=0?"Rio acima do limite":"Rio abaixo do limite", String(Math.abs(cm)),"cm",
             rioNome(F.rioSt.reg)+" · "+trendTxt(F.rioSt), F.rf>=0.85);
 }
+/* JANELA FIXA DE 12 h em todos os cards de chuva. Antes a chuva medida vinha em
+   12 h, a de comparacao em 24 h e o limite na duracao que o motor achou mais
+   critica naquele instante (3, 6, 12 ou 24 h) — tres janelas na mesma linha.
+   Numero de janela movel nao serve para comparar hoje com ontem nem medida com
+   limite. O motor continua testando as quatro duracoes por dentro; o que fica
+   fixo e o que a tela mostra. */
+const CHUVA_MIN=5;   // abaixo disso nao e chuva que se anuncia, e traco
 /* O limite vigente e DADO (desce conforme o solo satura) e por isso fica em
-   card, ao lado da chuva medida com que se compara. Fora da prosa: em texto
-   corrido virava promessa ("bastam X para transbordar"), e a pagina nao promete
-   nada — publica medida. */
+   card, ao lado da chuva medida com que se compara — as duas em 12 h. Fora da
+   prosa: em texto corrido virava promessa ("bastam X para transbordar"), e a
+   pagina nao promete nada — publica medida. */
 function cardDeChuvaMedida(R, F){
   const detalhe = R.obs12==null ? "sem estação de chuva"
-    : "24 h: "+fmt(R.obs24,1)+" mm"+(F.ok?(" · limite com este solo: "+fmt(F.now.lim,0)+" mm em "+F.now.dur+" h"):"");
+    : (F.ok ? "limite com este solo: "+fmt(F.lim12,0)+" mm em 12 h" : "medida na rede");
   return qk("Chuva medida 12 h", R.obs12!=null?fmt(R.obs12,1):"--","mm", detalhe, R.obs12!=null&&R.obs12>=25);
 }
+/* Chuva prevista tambem em 12 h, mesma janela da medida. Abaixo de CHUVA_MIN o
+   card diz "traço": anunciar "1 mm" como chuva prevista da peso a nada. */
+function cardDeChuvaPrevista(){
+  if(!APP.FC) return qk("Chuva prevista 12 h","--","mm","previsão indisponível",false);
+  const mm=APP.FC.next12;
+  if(mm<CHUVA_MIN) return qk("Chuva prevista 12 h","traço","", "abaixo de "+CHUVA_MIN+" mm", false);
+  return qk("Chuva prevista 12 h", fmt(mm,0),"mm", "pela previsão", mm>=20);
+}
+/* "Proxima chuva" so anuncia evento que soma CHUVA_MIN ou mais (o corte esta em
+   dados.js/proximoEvento). Sem isso o card dizia "hoje 17h · ~0 mm no evento":
+   ocupava o lugar mais visivel da previsao para avisar que nao vai chover. */
 function cardDeProximaChuva(){
   const ev=APP.FC&&APP.FC.event;
-  if(!ev) return qk("Próxima chuva","sem","evento","nada à vista",false);
+  if(!ev) return qk("Próxima chuva","sem","evento","nada acima de "+CHUVA_MIN+" mm em 7 dias",false);
   return qk("Próxima chuva", diaCurto(ev.start), horaCurta(ev.start), "~"+fmt(ev.mm,0)+" mm no evento", ev.mm>=40);
 }
 /* Cards = dado puro, na ordem em que a pergunta se faz: veredito, quanto o solo
@@ -123,7 +141,7 @@ function cardsDeRisco(R){
   const F=R.flood, cards=[floodCard(F)];
   if(F.ok) cards.push(cardDeSolo(F), cardDeRio(F));
   cards.push(cardDeChuvaMedida(R,F));
-  cards.push(qk("Chuva prevista 24 h", APP.FC?fmt(APP.FC.next24,0):"-","mm", "pela previsão", APP.FC&&APP.FC.next24>=20));
+  cards.push(cardDeChuvaPrevista());
   cards.push(cardDeProximaChuva());
   return cards;
 }
@@ -209,8 +227,11 @@ const ORDEM_BACIAS=["rolante","areia"];
 const CLASSE_STATUS={inund:"st-inund", alerta:"st-alerta", atencao:"st-atencao",
                      observa:"st-observa", normal:"st-normal"};
 
+/* Barra por estacao na mesma janela dos cards (12 h): a barra e o numero ao lado
+   dela precisam medir a mesma coisa que "Chuva 12 h medida" logo acima, senao a
+   estacao com barra cheia nao e a que aparece no total. */
 function barraDeEstacao(s, maxMm){
-  const mm=s.rain24||0, fracao=clamp(mm/maxMm,0,1);
+  const mm=s.rain12||0, fracao=clamp(mm/maxMm,0,1);
   return '<div class="sbar'+(mm<0.2?' dry':'')+'">'+
          '<div class="snm">'+s.reg.code+' <i>'+s.reg.rio+'</i></div>'+
          '<div class="track"><div class="f '+rainCls(mm)+'" style="--w:'+(fracao*100).toFixed(0)+'%"></div></div>'+
@@ -230,16 +251,19 @@ function numerosDaBacia(B, g){
   const bn=(k,v)=>'<div class="bn">'+k+'<b>'+v+'</b></div>';
   return '<div class="basin-nums">'+
     bn("Chovendo agora", B.rainingNow.length+' <small>de '+B.rainSt.length+complemento+'</small>')+
-    bn("Chuva 24 h medida", (B.rain24!=null?fmt(B.rain24,1):'-')+' <small>mm (máx.)</small>')+
-    bn("Chuva 12 h medida", (B.rain12!=null?fmt(B.rain12,1):'-')+' <small>mm</small>')+
+    bn("Chuva 12 h medida", (B.rain12!=null?fmt(B.rain12,1):'-')+' <small>mm (máx.)</small>')+
     bn("Régua", g?fmt(g.nowLevel,2)+' <small>m ('+g.reg.code+')</small>':'-')+
     '</div>';
 }
 function cardDeBacia(key){
   const B=APP.BAS[key], meta=B.meta, g=B.gauge;
+  /* Rotulo de reserva quando a bacia nao tem regua: continua lido em 24 h porque
+     as faixas (15/40/80 mm) foram aferidas nessa duracao e nao ha medida de
+     campo para reaferir em 12 h. Produz palavra, nunca numero na tela, entao nao
+     entra na comparacao de janelas. */
   const stt = g ? statusRel(g) : chuvaStatus(B.rain24);
   const cls = CLASSE_STATUS[stt.k]||"st-normal";
-  const maxMm=Math.max(10,B.rain24||0);
+  const maxMm=Math.max(10,B.rain12||0);
   const barras = B.rainSt.length
     ? B.rainSt.map(s=>barraDeEstacao(s,maxMm)).join("")
     : '<p class="basin-empty">Nenhuma estação de chuva desta bacia com sinal agora.</p>';

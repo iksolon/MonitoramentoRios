@@ -362,11 +362,12 @@ function pontoDeRegua(s, pp, x, y, rotulo){
     '<title>'+s.reg.code+' ('+s.reg.rio+'): nível '+leitura+(s.levelCheck?' — em conferência':'')+'</title></g>'+
     rotulo(8, s.levelCheck?"oklch(0.90 0.12 82)":"oklch(0.98 0.03 200)");
 }
-/* Estacao de chuva = circulo; o raio cresce com o acumulado de 24 h. */
+/* Estacao de chuva = circulo; o raio cresce com o acumulado de 12 h, a mesma
+   janela dos cards e das barras da bacia. */
 function pontoDeChuva(s, x, y, maxMm, rotulo){
-  const mm24=s.rain24||0, mmAgora=rainNowOf(s), chovendo=mmAgora>0.05;
-  const raio=(chovendo?3.0:2.2)+clamp(mm24/maxMm,0,1)*3.4;
-  const detalhe=(chovendo?('chovendo agora, '+fmt(mmAgora,1)+' mm/h · '):'')+fmt(mm24,1)+' mm em 24 h';
+  const mm12=s.rain12||0, mmAgora=rainNowOf(s), chovendo=mmAgora>0.05;
+  const raio=(chovendo?3.0:2.2)+clamp(mm12/maxMm,0,1)*3.4;
+  const detalhe=(chovendo?('chovendo agora, '+fmt(mmAgora,1)+' mm/h · '):'')+fmt(mm12,1)+' mm em 12 h';
   return pontoBase(x,y,8,s.reg.code+(chovendo?" chovendo agora":" estação de chuva"), chovendo?"pano-wet":null)+
     '<circle cx="'+x+'" cy="'+y+'" r="'+raio.toFixed(1)+'" fill="'+(chovendo?"oklch(0.80 0.13 205)":"var(--teal)")+'" fill-opacity="'+(chovendo?"1":"0.85")+'" stroke="oklch(0.98 0.02 200)" stroke-width="'+(chovendo?"1.6":"1.2")+'"/>'+
     '<title>'+s.reg.code+' ('+s.reg.rio+'): '+detalhe+'</title></g>'+
@@ -388,7 +389,7 @@ function rotuladorCurto(sts){
   };
 }
 function pontosDeEstacao(B, pts, sts){
-  const maxMm=Math.max(10,B.rain24||0);
+  const maxMm=Math.max(10,B.rain12||0);
   const curtoDe=rotuladorCurto(sts);
   return pts.map(pp=>{
     const s=pp.s, x=pp.x.toFixed(1), y=pp.y.toFixed(1), curto=curtoDe(s);

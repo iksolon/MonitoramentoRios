@@ -17,7 +17,7 @@ export function computeRisk(){
   let maxFrac=0, maxTrend=0, worst=null;
   APP.NET.trusted.forEach(s=>{ const f=s.cotaFrac||0; if(f>maxFrac){maxFrac=f;worst=s;} if((s.trend||0)>maxTrend) maxTrend=s.trend||0; });
   if(!worst && APP.NET.trusted.length) worst=APP.NET.trusted[0];
-  const obs12=APP.NET.rain12, obs24=APP.NET.rain24, obsNow=APP.NET.rainNow;
+  const obs12=APP.NET.rain12, obsNow=APP.NET.rainNow;
   const nowcast = APP.FC?APP.FC.nowMm:0;
   const raining = (obsNow!=null&&obsNow>=0.2) || nowcast>=0.3 || maxTrend>=8;
   // situacao AGORA = veredito do detector (chuva caida + regua observada)
@@ -29,7 +29,7 @@ export function computeRisk(){
   if(APP.FC){ const pd=APP.FC.peakDay; if((pd&&pd.mm>=80)||APP.FC.next72>=100) fut=3; else if((pd&&pd.mm>=40)||APP.FC.next72>=60) fut=2; else if((pd&&pd.mm>=15)||APP.FC.next24>=10) fut=1; if(pd) futWhen=pd.date; }
   const level=Math.max(cur,fut);
   const drivenBy = fut>cur?"previsto":(cur>0?"agora":"previsto");
-  APP.RISK={ level, cur, fut, drivenBy, raining, maxFrac, maxTrend, worst, nowcast, futWhen, obs12, obs24, obsNow, flood:F };
+  APP.RISK={ level, cur, fut, drivenBy, raining, maxFrac, maxTrend, worst, nowcast, futWhen, obs12, obsNow, flood:F };
 }
 
 /* ===== ENCHENTE NA CIDADE ============================================
@@ -130,6 +130,12 @@ const FLOOD_FRAC=1.45;
 
 function soilIndex(obs){ let a=0; for(let i=0;i<obs.length;i++) a=a*SOIL_K+(obs[i]||0); return a; }
 function soilSat(api){ return clamp((api-SOIL_DRY)/(SOIL_WET-SOIL_DRY),0,1); }
+/* Limiar da janela FIXA de 12 h com o solo atual. O motor continua decidindo
+   pela duracao que estoura primeiro (3/6/12/24 h), mas o card mostra sempre
+   12 h: limiar de duracao variavel muda de janela de uma hora para a outra e
+   nao da para comparar dia com dia. */
+const FFG12=FFG.find(l=>l[0]===12);
+function limite12(sat){ return FFG12[1]-(FFG12[1]-FFG12[2])*sat; }
 
 /* Razao critica: para cada duracao, quanto da chuva necessaria ja caiu.
    >=1 significa que aquela duracao estourou o limiar do solo atual. */
@@ -257,7 +263,7 @@ function cityFlood(){
   return {ok:true, level:Math.max(rio.nivel,chuva),
           rio:rio.nivel, chuva,
           rf:rio.frac, rf6:rio.pico6, rise:rio.subida, recuo:rio.recuo, rioSt:rio.estacao, nGauge:rio.reguas,
-          api, sat:agora.sat, solo:soilLabel(agora.sat),
+          api, sat:agora.sat, solo:soilLabel(agora.sat), lim12:limite12(agora.sat),
           now:agora, peak:futuro.pico, peakAt:futuro.picoEm, eta:futuro.eta, etaRio:etaDoRio(rio),
           sev:mag.sev, sevFut:mag.sevFut, forca:mag.forca, excesso:mag.excesso};
 }

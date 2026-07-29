@@ -375,6 +375,21 @@ Decisões do dono do projeto. Respeite-as ao mexer em qualquer texto:
 - Não duplicar: se um card mostra "Rio acima do limite · 54 cm", a prosa não
   repete a mesma coisa.
 - O aviso legal fica **uma vez**, no rodapé.
+- **Janela de chuva FIXA em 12 h em tudo que a tela mostra.** Chuva medida,
+  chuva prevista, limite de comparação, barras por estação, tamanho dos pingos
+  no corte da bacia e a legenda: todos em 12 h. Antes a tela misturava três
+  janelas na mesma linha ("Chuva medida 12 h · 24 h: 65,4 mm · limite 91 mm em
+  24 h", com o limite pulando entre 3, 6, 12 e 24 h conforme o instante) —
+  número de janela móvel não serve para comparar hoje com ontem, nem medida com
+  limite. O motor continua testando as quatro durações por dentro; o que ficou
+  fixo é a apresentação. Consequência aceita: em evento cuja duração crítica não
+  é a de 12 h, o card pode mostrar medida abaixo do limite de 12 h enquanto o
+  veredito está aceso pela duração de 24 h. A constante é `CHUVA_MIN` e a janela
+  vive em `painel.js` (cards) e `dados.js/next12`.
+- **Chuva abaixo de 5 mm não se anuncia.** "Próxima chuva" só aceita evento que
+  some 5 mm ou mais (`EVENTO_MIN` em `dados.js`), e a chuva prevista de 12 h
+  abaixo disso aparece como "traço". O card dizia "hoje 17h · ~0 mm no evento":
+  ocupava o lugar mais visível da previsão para avisar que não vai chover.
 - **Deploy em produção é do usuário.** O agente commita e para.
 
 Para revisar texto, carregue a página e liste todos os nós de texto acima de ~35
