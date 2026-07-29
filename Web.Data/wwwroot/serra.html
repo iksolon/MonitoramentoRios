@@ -688,6 +688,15 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   }
   function codeTail(code){ return code.split("-")[1]||code; }
   function kmTxt(reg){ const k=kmCidade(reg); return k<1?"no centro":k+" km da cidade"; }
+  /* Nome de rio para PROSA: tira o qualificador entre parenteses do registro.
+     "Rio Areia (norte)" -> "Rio Areia", "Faxinal (cabeceira)" -> "Faxinal".
+     Sem isso o texto saia com parentese dentro de parentese. O nome completo
+     continua nos cards de estacao, onde serve para distinguir as reguas. */
+  function rioNome(reg){ return reg.rio.replace(/\s*\(.*$/,"").trim(); }
+  /* Artigo certo na frase. O registro tem "Rio Areia (norte)" mas tambem
+     "Boa Vista" e "Mascarada": sem tratar, o texto saia "sobre o Boa Vista". */
+  function rioArt(reg){ const n=rioNome(reg); return /^Rio\s/i.test(n)?("o "+n):("o rio "+n); }
+  function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
   /* Confianca vale SO para altura de rio. Quem mede nivel sao as reguas RSRL:
      GLLS e BE01 sao as leituras validadas; AR01 esta em conferencia
      (aparece no painel, nao comanda o risco). CE02 esta fora: regua com dado
@@ -704,7 +713,8 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   function statusRel(s){
     if(!s||s.nowLevel==null) return {k:"normal",label:"sem sinal"};
     const c=s.reg.cotaAlerta;
-    if(c){ const f=s.nowLevel/c; if(f>=1) return {k:"inund",label:"Cota atingida"}; if(f>=0.9) return {k:"alerta",label:"Alerta"}; if(f>=0.7) return {k:"atencao",label:"Atenção"}; if(f>=0.45) return {k:"observa",label:"Observação"}; return {k:"normal",label:"Normal"}; }
+    // vocabulario unico na interface: "limite" em vez de "cota" (jargao)
+    if(c){ const f=s.nowLevel/c; if(f>=1) return {k:"inund",label:"Acima do limite"}; if(f>=0.9) return {k:"alerta",label:"No limite"}; if(f>=0.7) return {k:"atencao",label:"Atenção"}; if(f>=0.45) return {k:"observa",label:"Observação"}; return {k:"normal",label:"Normal"}; }
     const t=s.trend||0; if(t>=15) return {k:"atencao",label:"Subindo rápido"}; if(t>=3) return {k:"observa",label:"Subindo"}; if(t<=-3) return {k:"normal",label:"Baixando"}; return {k:"normal",label:"Estável"};
   }
   const BACIAS={ rolante:{key:"rolante",nome:"Rio Rolante",sub:"vem de Riozinho"}, areia:{key:"areia",nome:"Rio Areia",sub:"deságua no Rolante no fim da cidade"} };
@@ -1212,15 +1222,24 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
       : ("Risco "+(R.level===0?"baixo":RISKLBL[R.level].toLowerCase()));
     $("#risk-when").textContent = R.drivenBy==="previsto"&&R.futWhen? ("motivado pela previsão · "+diaCurto(R.futWhen)) : "situação agora";
     const w=R.worst, F=R.flood; let head="", drv="";
+    /* Prosa nao leva codigo de estacao nem parenteses. O texto anterior saia
+       assim: "Maior acumulado da rede em EXFP-AR01 (Rio Areia (alto)). Régua
+       RSRL-BE01: acima da cota — 177%." — parentese dentro de parentese e dois
+       codigos que so quem mantem a rede entende. Codigo fica nos cards de
+       regua e no painel da regra, onde e rotulo, nao frase. */
     const top=NET.rainSt[0];
     const medida = (R.obs12!=null&&top)
-      ? ("Maior acumulado da rede em <b>"+top.reg.code+"</b> ("+top.reg.rio+"). ")
+      ? ("A chuva mais forte caiu sobre "+rioArt(top.reg)+". ")
       : "";
     const regua = w
-      ? ("Régua "+w.reg.code+": "+(w.reg.cotaAlerta
-          ? (R.maxFrac>=1?("acima da cota — "+fmt(R.maxFrac*100,0)+"%"):R.maxFrac>=0.9?"quase na cota":R.maxFrac>=0.7?"acima de 70% da cota":"nível normal")
-          : trendTxt(w))+". ")
-      : "Sem régua validada com sinal agora. ";
+      ? (w.reg.cotaAlerta
+          ? (R.maxFrac>=1
+              ? (cap(rioArt(w.reg))+" está "+Math.round((R.maxFrac-1)*w.reg.cotaAlerta*100)+" cm acima do limite. ")
+              : (R.maxFrac>=0.9?(cap(rioArt(w.reg))+" está quase no limite. ")
+              : (R.maxFrac>=0.7?(cap(rioArt(w.reg))+" está subindo, mas ainda abaixo do limite. ")
+              : ("Os rios estão em nível normal. "))))
+          : (cap(rioArt(w.reg))+" está "+trendTxt(w)+". "))
+      : "Nenhuma régua de nível com leitura confiável agora. ";
     // limiar exibido e o VIGENTE (desce com o solo), nao um numero fixo:
     // dizer "80 mm em 12 h" com o solo saturado era informacao errada.
     const limTxt = F.ok
@@ -1263,35 +1282,41 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     $("#risk-quick").innerHTML=q.join("");
     renderFloodRule(F);
   }
-  /* Veredito em uma palavra, com o numero que o sustenta logo abaixo. Cada
-     ramo cita a EVIDENCIA que mandou (rio observado ou chuva caida), pra que
-     ninguem precise adivinhar de onde saiu o alarme. */
+  /* Frase em portugues corrido, sem codigo de estacao, sem parenteses e sem
+     razao tecnica. Antes o rodape do card era isto:
+       "rio e chuva — RSRL-BE01 a 147% da cota (1,03 m de 0,70 m) · 111 mm em
+        24 h · limiar 86 mm (solo saturado) · 1,64x o limiar"
+     Nove numeros numa linha, ilegivel de relance — e justamente o momento em
+     que a pessoa tem menos paciencia para ler. Os numeros continuam todos no
+     painel "Regua de decisao" logo abaixo, que e o lugar deles; aqui fica so a
+     frase que se le em dois segundos.
+     Medida em CENTIMETROS ACIMA DO LIMITE em vez de "% da cota": "33 cm acima
+     do limite" e uma imagem, "147 % da cota" e uma conta. */
   function floodCard(F){
-    if(!F.ok) return qk("Enchente na cidade","--","","sem chuva medida nem previsão para calcular",false);
-    /* nivel exibido = o que a DECISAO usou (rf*cota), nao o valor suavizado:
-       senao o card diria "148% da cota (0,66 m de 0,70 m)", numeros que nao
-       fecham entre si. */
-    const rioNum = F.rioSt?(F.rioSt.reg.code+" a "+fmt(F.rf*100,0)+"% da cota ("+fmt(F.rf*F.rioSt.reg.cotaAlerta,2)+" m de "+fmt(F.rioSt.reg.cotaAlerta,2)+" m)"):"";
-    const chuvaNum = fmt(F.now.got,0)+" mm em "+F.now.dur+" h · limiar "+fmt(F.now.lim,0)+" mm (solo "+F.solo+")";
-    /* Veredito carrega a MAGNITUDE. "acontecendo" servia pra agua na guia e pra
-       cidade tomada — em 29/07/2026 foi cidade tomada e o card nao dizia. */
+    if(!F.ok) return qk("Enchente na cidade","--","","sem chuva medida ou prevista para calcular",false);
+    const rio = F.rioSt?rioArt(F.rioSt.reg):"o rio";
+    const acima = F.rioSt?Math.round((F.rf-1)*F.rioSt.reg.cotaAlerta*100):0;
+    const acimaTxt = acima>=5?(cap(rio)+" está "+acima+" cm acima do limite"):(cap(rio)+" passou do limite");
     const grande = F.sev>=2;
-    const vGrande = grande?"enchente grande":"acontecendo";
-    const forcaTxt = " · "+fmt(F.forca,2)+"x o limiar";
-    if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",vGrande,"agora", "rio e chuva — "+rioNum+" · "+chuvaNum+forcaTxt, true);
-    if(F.rio>=3)             return qk("Enchente na cidade",vGrande,"agora", "rio acima da cota — "+rioNum+forcaTxt, true);
-    if(F.chuva>=3)           return qk("Enchente na cidade",vGrande,"agora", "chuva no limiar — "+chuvaNum+forcaTxt, true);
+    // valor longo ("enchente grande") sem unidade ao lado, senao quebra a linha
+    const v = grande?"enchente grande":"acontecendo", u = grande?"":"agora";
+    if(F.rio>=3&&F.chuva>=3)
+      return qk("Enchente na cidade",v,u, acimaTxt+", e a chuva já passou do que o solo "+F.solo+" aguentava.", true);
+    if(F.rio>=3)
+      return qk("Enchente na cidade",v,u, acimaTxt+".", true);
+    if(F.chuva>=3)
+      return qk("Enchente na cidade",v,u, "Já choveu mais do que o solo "+F.solo+" aguenta.", true);
     /* "iminente" exige CORROBORACAO: extrapolar a subida da regua sozinha da
        falso positivo. Em 28/07 09h a BE01 subia 4,5 cm/h a 80 % da cota e a
        reta batia a cota em 3 h — mas o solo ainda absorvia (razao 0,49) e nao
        houve alagamento. Só vale com a chuva ja em faixa de atencao. */
     if(F.etaRio!=null&&F.etaRio<=6&&F.chuva>=2)
-      return qk("Enchente na cidade","iminente", quandoTxt(F.etaRio), rioNum+" · subindo "+fmt(F.rise,1)+" cm/h", true);
+      return qk("Enchente na cidade","iminente", quandoTxt(F.etaRio), "No ritmo de agora, "+rio+" passa do limite.", true);
     if(F.eta!=null)
       return qk("Enchente na cidade","possível", quandoTxt(F.eta),
-        (F.sevFut>=2?"pode ser grande · ":"")+"pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm em "+F.now.dur+" h", true);
-    const pico="pico previsto chega a "+fmt(F.peak.ratio*100,0)+"% do limiar"+(F.peakAt?(" em "+quandoTxt(F.peakAt)):"");
-    return qk("Enchente na cidade","improvável","nas próximas 48 h", pico, false);
+        (F.sevFut>=2?"Pode ser grande. ":"")+"Se a chuva prevista se confirmar, faltam "+fmt(F.now.falta,0)+" mm.", true);
+    return qk("Enchente na cidade","improvável","nas próximas 48 h",
+      "A chuva prevista não chega ao limite para transbordar.", false);
   }
   /* Os tres numeros da regra, na ordem em que a pergunta e feita:
      quanto choveu ANTES -> quanto esta o RIO -> quanto FALTA de chuva.
@@ -1301,29 +1326,36 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
     if(!F.ok){ el.hidden=true; return; }
     el.hidden=false;
     const it=(k,v,u,s,on)=>'<div class="fr-i'+(on?' on':'')+'"><div class="fk">'+k+'</div><div class="fv">'+v+(u?' <small>'+u+'</small>':'')+'</div><div class="fs">'+s+'</div></div>';
-    const prev = NET.rain72prior!=null?fmt(NET.rain72prior,0)+" mm nas 72 h anteriores":"sem histórico de chuva";
-    const rioV = F.rioSt?fmt(F.rf*100,0):"--";
+    /* Cada bloco: rotulo curto, um numero, e uma legenda que explica o numero
+       em portugues. Sem codigo de estacao, sem "cota", sem razao. */
+    const prev = NET.rain72prior!=null?("nos 3 dias anteriores choveu "+fmt(NET.rain72prior,0)+" mm"):"sem histórico de chuva";
+    /* Rio em CENTIMETROS acima ou abaixo do limite, com sinal. "+33 cm" se le
+       na hora; "147 % da cota" obriga a fazer conta e "cota" e jargao. */
+    const acimaCm = F.rioSt?Math.round((F.rf-1)*F.rioSt.reg.cotaAlerta*100):null;
+    const rioK = acimaCm==null?"Rio":(acimaCm>=0?"Rio acima do limite":"Rio abaixo do limite");
+    const rioV = acimaCm==null?"--":String(Math.abs(acimaCm));
     const rioS = F.rioSt
-      ? (F.rioSt.reg.code+" · "+F.rioSt.reg.rio+" · "+trendTxt(F.rioSt))
-      : (NET.gauges.length?"nenhuma régua validada com leitura fresca":"sem régua com sinal");
+      ? (rioNome(F.rioSt.reg)+" · "+trendTxt(F.rioSt))
+      : (NET.gauges.length?"nenhuma régua com leitura confiável":"sem régua com sinal");
     /* Enquanto falta chuva, o numero util e quanto falta. Depois de estourar o
-       limiar, o numero util e QUANTO PASSOU — e a medida do tamanho da
+       limite, o numero util e QUANTO PASSOU — e a medida do tamanho da
        enchente, e era justamente ela que o painel escondia mostrando "0 mm". */
     const passou = F.now.falta<=0;
-    const faltaK = passou?"Passou do limiar":"Falta chover";
+    const faltaK = passou?"Passou do limite":"Falta chover";
     const faltaV = passou?fmt(F.excesso,0):fmt(F.now.falta,0);
     const durS = passou
-      ? ("caíram "+fmt(F.now.got,0)+" mm em "+F.now.dur+" h · limiar era "+fmt(F.now.lim,0)+" mm")
-      : ("na duração crítica de "+F.now.dur+" h · já caíram "+fmt(F.now.got,0)+" mm");
-    el.innerHTML='<div class="fr-h">Régua de decisão da enchente</div><div class="fr-row">'+
-      it("Solo (chuva prévia)", fmt(F.api,0),"mm", F.solo+" · "+prev, F.sat>=0.5)+
-      it("Rio na cota", rioV,"%", rioS, F.rf>=0.85)+
+      ? ("choveu "+fmt(F.now.got,0)+" mm em "+F.now.dur+" h e o solo aguentava "+fmt(F.now.lim,0)+" mm")
+      : ("já choveu "+fmt(F.now.got,0)+" mm em "+F.now.dur+" h e o solo aguenta "+fmt(F.now.lim,0)+" mm");
+    el.innerHTML='<div class="fr-h">Como o app decidiu</div><div class="fr-row">'+
+      it("Chuva no solo", fmt(F.api,0),"mm", "solo "+F.solo+" · "+prev, F.sat>=0.5)+
+      it(rioK, rioV,"cm", rioS, F.rf>=0.85)+
       it(faltaK, faltaV,"mm", durS, passou||F.now.falta<=15)+
       '</div>'+
-      '<div class="fr-tx">Quanto mais chuva já caiu nos dias anteriores, <b>menos chuva nova</b> a cidade aguenta: '+
-      'com solo seco o limiar de '+F.now.dur+' h é '+fmt(FFG.filter(f=>f[0]===F.now.dur)[0][1],0)+' mm, com solo saturado cai para '+
-      fmt(FFG.filter(f=>f[0]===F.now.dur)[0][2],0)+' mm. Agora está em <b>'+fmt(F.now.lim,0)+' mm</b>. '+
-      'Régua acima da cota vale por si: é enchente, não desconto.</div>';
+      '<div class="fr-tx">A regra é simples: <b>quanto mais choveu nos dias anteriores, '+
+      'menos chuva nova a cidade aguenta</b> — o chão encharcado não absorve mais nada e '+
+      'quase tudo vira enxurrada. Em terra seca seriam '+fmt(FFG.filter(f=>f[0]===F.now.dur)[0][1],0)+' mm; '+
+      'com o solo de hoje bastam <b>'+fmt(F.now.lim,0)+' mm</b>. E se a régua marca acima do limite, '+
+      'não tem cálculo: é enchente.</div>';
   }
   function trendTxt(s){ if(!s||s.trend==null) return "sem tendência"; if(s.trend>=1) return "subindo "+fmt(s.trend,1)+" cm/h"; if(s.trend<=-1) return "baixando "+fmt(Math.abs(s.trend),1)+" cm/h"; return "estável"; }
   function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }
@@ -1353,7 +1385,9 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
   /* ===== RENDER: reguas ===== */
   /* % da cota SEM teto: a BE01 chegou a 177 % em 29/07 e o painel mostrava
      "100%", escondendo a gravidade justamente no pico. */
-  function cotaTxt(s){ return s.reg.cotaAlerta? ("cota "+fmt(s.reg.cotaAlerta,1)+" m · "+Math.round((s.nowLevel/s.reg.cotaAlerta)*100)+"%") : "sem cota definida"; }
+  function cotaTxt(s){ if(!s.reg.cotaAlerta) return "sem limite definido";
+    const cm=Math.round((s.nowLevel-s.reg.cotaAlerta)*100);
+    return (cm>=0?(cm+" cm acima do limite"):(Math.abs(cm)+" cm abaixo do limite"))+" de "+fmt(s.reg.cotaAlerta,2)+" m"; }
   function renderGauges(){
     const wrap=$("#gauges"), list=NET.gauges;
     if(!list.length){
