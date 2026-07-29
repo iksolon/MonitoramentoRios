@@ -194,6 +194,15 @@ function canalRio(secou){
      regua qualquer secando nao descreve o rio que esta acima do limite. */
   const desce = !!estacao && estacao.trend!=null && estacao.trend<=-RECUO_QUEDA;
   const recuo = secou && desce && frac < pico6-RECUO_MARGEM;
+  /* Liberacao da memoria do pico6 (abaixo) e mais frouxa que `desce`: exige so
+     chuva parada e tendencia nao subindo, nao a queda forte de RECUO_QUEDA.
+     Aferida em 29/07/2026 20h34: BE01 em 89,9 % da cota (ja abaixo do limite),
+     pico6 101 %, tendencia -1,6 cm/h, sem chuva — com o gatilho antigo
+     (`!desce`, que exige <=-2 cm/h) o motor ainda gritava "acontecendo" porque
+     a queda desacelera perto da base e nunca cruzava -2 cm/h. Exigir so "nao
+     esta subindo" com chuva parada basta: um blip de regua suja produz
+     tendencia positiva ou nula por ruido, nao uma serie de leituras caindo. */
+  const arrefeceu = secou && estacao && estacao.trend!=null && estacao.trend<=0;
   let nivel=0;
   if(recuo){
     if(frac>=FLOOD_FRAC) nivel=3;
@@ -202,15 +211,9 @@ function canalRio(secou){
   }
   /* pico6>=1 mantem "enchente" enquanto uma leitura mais baixa isolada nao
      pode apagar o alarme (regua suja, degrau de telemetria). Isso so vale
-     ENQUANTO a tendencia ainda nao confirmou queda: com `desce` true (Theil-Sen
-     negativo, nao ruido de uma leitura) o pico de 6 h vira memoria velha, nao
-     evidencia de enchente em curso — foi o que prendeu "enchente grande" na
-     tela com a BE01 ja 5 % abaixo do limite e caindo ha horas, so porque o
-     recuo (que exige queda de 15 pontos do pico) ainda nao tinha vencido a
-     margem. Aferido em 29/07/2026 18h: frac 94,9 %, pico6 108 %, tendencia
-     -2 cm/h, sem chuva — sem o `&&!desce` o motor gritava "acontecendo" com
-     o rio de volta abaixo do limite. */
-  else if(frac>=1 || (pico6>=1&&frac>=0.85&&!desce) || (frac>=0.85&&subida>=3)) nivel=3;
+     ENQUANTO a tendencia ainda nao confirmou queda (`arrefeceu`, ver acima) —
+     o pico de 6 h vira memoria velha, nao evidencia de enchente em curso. */
+  else if(frac>=1 || (pico6>=1&&frac>=0.85&&!arrefeceu) || (frac>=0.85&&subida>=3)) nivel=3;
   else if(frac>=0.85) nivel=2;
   else if(frac>=0.70) nivel=1;
   return {nivel, frac, pico6, subida, recuo, estacao, reguas};
