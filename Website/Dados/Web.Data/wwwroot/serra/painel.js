@@ -27,23 +27,22 @@ export function renderNetCard(){
    Eram 78 linhas escrevendo em quatro lugares do DOM. Separado em: selo,
    manchete e cards. Nenhuma decide regra — o veredito vem pronto de
    enchente.js; aqui so viram texto. */
-const RISKLBL=["BAIXO","BAIXO","ATENÇÃO","ALTO"];
-const RISKCLS=["baixo","baixo","atencao","alto"];
-
-/* Com enchente em curso o selo para de falar em "risco": risco e o que pode
-   acontecer, e isso ja aconteceu. */
-function textoDoSelo(R){
-  const F=R.flood;
-  if(F&&F.ok&&F.level>=3) return F.sev>=2?"Enchente grande":"Enchente em curso";
-  /* Estado medido, entre a enchente e o normal: o rio ainda esta acima do
-     limite mas descendo, sem chuva. Dizer "Risco atenção" aqui apagava o fato
-     de a agua ainda estar fora da caixa; dizer "Enchente" negava o campo. */
-  if(F&&F.ok&&F.recuo&&F.rf>=1) return "Água baixando";
-  return "Risco "+(R.level===0?"baixo":RISKLBL[R.level].toLowerCase());
-}
+/* Indice de risco 1-10 (ver enchente.js: escalaRisco/ESCALA_*): 5 faixas de cor,
+   ceil(n/2) mapeia 1-2/3-4/5-6/7-8/9-10 pra nivel-1..nivel-5. O numero
+   substitui TODA categoria em palavra ("baixo/atencao/alto", "enchente
+   grande", "agua baixando") — inclusive quando ja e fato confirmado, por
+   pedido do dono do projeto: consistencia visual em vez de dois vocabularios
+   diferentes (fato vs. previsao) competindo no mesmo selo. A frase que diz
+   O QUE esta acontecendo continua na manchete (function manchete(), abaixo),
+   que fica de fato descritiva. */
+function faixaDoIndice(n){ return "nivel-"+Math.min(5, Math.max(1, Math.ceil(n/2))); }
+/* Nota de calibracao: a escala foi aferida com poucos eventos reais (o
+   principal, 29/07/2026) — nao e probabilidade estatistica. O * aponta pro
+   aviso no rodape (.disclaimer), sem duplicar o texto em cada card. */
+const NOTA_ESCALA='<sup class="idx-nota" title="Escala com poucos dados reais para calibração — ver rodapé">*</sup>';
 function renderSelo(R){
-  $("#risk-badge").className="risk-badge "+RISKCLS[R.level];
-  $("#risk-label").textContent=textoDoSelo(R);
+  $("#risk-badge").className="risk-badge "+faixaDoIndice(R.level);
+  $("#risk-label").innerHTML=R.level+"/10"+NOTA_ESCALA;
   $("#risk-when").textContent = (R.drivenBy==="previsto"&&R.futWhen)
     ? ("motivado pela previsão · "+diaCurto(R.futWhen))
     : "situação agora";
