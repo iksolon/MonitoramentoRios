@@ -159,26 +159,28 @@ export function renderRisk(){
    em frase era texto a mais dizendo o mesmo. */
 function floodCard(F){
   if(!F.ok) return qk("Enchente na cidade","--","","sem chuva medida ou prevista",false);
-  const grande = F.sev>=2;
-  // valor longo ("enchente grande") sem unidade ao lado, senao quebra a linha
-  const v = grande?"enchente grande":"acontecendo", u = grande?"":"agora";
-  if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",v,u, "rio acima do limite e chuva acima do que o solo aguenta", true);
-  if(F.rio>=3)             return qk("Enchente na cidade",v,u, "rio acima do limite", true);
-  if(F.chuva>=3)           return qk("Enchente na cidade",v,u, "chuva acima do que o solo aguenta", true);
-  /* Recuo com regua ainda acima do limite: sem esta linha o card caia direto em
-     "improvável", que e falso enquanto a agua nao voltou para a caixa. */
+  /* O VALOR vira o mesmo indice 1-10 do selo (F.indice — fonte unica, ver
+     cityFlood() em enchente.js), em vez da palavra-veredito
+     (grande/acontecendo/iminente/possivel/improvavel). O "sub" (linha
+     pequena de explicacao) e o "u" (contexto de tempo: "agora"/"em Xh"/
+     "nas proximas 48h") continuam EXATAMENTE como estavam — sao descricao
+     de fato, nao categoria de risco, entao nao precisam virar numero.
+     `hl` (realce visual do card) passa a acompanhar o proprio indice
+     (>=7, faixas laranja/vermelho) em vez de ligado por branch — antes TODO
+     estado "preditivo" (ate "possivel", o mais fraco) ja vinha com hl=true;
+     agora so realca quando o numero de fato justifica. */
+  const v = F.indice+"/10"+NOTA_ESCALA, hl = F.indice>=7;
+  if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",v,"agora", "rio acima do limite e chuva acima do que o solo aguenta", hl);
+  if(F.rio>=3)             return qk("Enchente na cidade",v,"agora", "rio acima do limite", hl);
+  if(F.chuva>=3)           return qk("Enchente na cidade",v,"agora", "chuva acima do que o solo aguenta", hl);
   if(F.recuo&&F.rf>=1)
-    return qk("Enchente na cidade","baixando","", "rio ainda acima do limite e descendo, sem chuva há 3 h", true);
-  /* "iminente" exige CORROBORACAO: extrapolar a subida da regua sozinha da
-     falso positivo. Em 28/07 09h a BE01 subia 4,5 cm/h a 80 % da cota e a
-     reta batia a cota em 3 h — mas o solo ainda absorvia (razao 0,49) e nao
-     houve alagamento. Só vale com a chuva ja em faixa de atencao. */
+    return qk("Enchente na cidade",v,"", "rio ainda acima do limite e descendo, sem chuva há 3 h", hl);
   if(F.etaRio!=null&&F.etaRio<=6&&F.chuva>=2)
-    return qk("Enchente na cidade","iminente", quandoTxt(F.etaRio), "pelo ritmo de subida do rio", true);
+    return qk("Enchente na cidade",v, quandoTxt(F.etaRio), "pelo ritmo de subida do rio", hl);
   if(F.eta!=null)
-    return qk("Enchente na cidade","possível", quandoTxt(F.eta),
-      "pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm", true);
-  return qk("Enchente na cidade","improvável","nas próximas 48 h", "chuva prevista abaixo do limite", false);
+    return qk("Enchente na cidade",v, quandoTxt(F.eta),
+      "pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm", hl);
+  return qk("Enchente na cidade",v,"nas próximas 48 h", "chuva prevista abaixo do limite", hl);
 }
 
 function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }
