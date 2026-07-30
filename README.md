@@ -26,6 +26,16 @@ Backend redundante e integrado, recebe dados diretamente de estações, de servi
 
 Frontend em Html/JS puro para leveza a simplicidade de treinamento e manutenção
 
+### Detector de enchente
+
+O painel de Rolante (`Web.Data/wwwroot/serra.html`) estima risco de enchente na
+cidade a partir da chuva medida pela rede, do quanto o solo já absorveu nos dias
+anteriores e da altura dos rios. O método, a calibração contra a enchente de
+29/07/2026 e o procedimento para refiná-lo com dados de eventos novos estão em
+[`docs/detector-enchente.md`](docs/detector-enchente.md). As ferramentas de
+replay (baixar um evento da produção e reproduzir a página hora a hora) estão em
+[`docs/replay/`](docs/replay/).
+
 ## Agradecimentos Especiais
 
 * A todas as doações em Bitcoin para o projeto [Bitcoin é Aqui](https://bitcoineaqui.com.br) que financiaram a pesquisa e desenvolvimento do projeto
