@@ -28,6 +28,10 @@
   --warn:      oklch(0.720 0.135 78);
   --warn-deep: oklch(0.590 0.130 66);
   --alert:     oklch(0.585 0.155 38);
+  /* Faixa 2 do indice de risco (1-10): entre --moss (verde) e --warn
+     (amarelo), pra completar o degrade de 5 cores sem inventar paleta nova. */
+  --verdeamarelo:      oklch(0.680 0.122 105);
+  --verdeamarelo-deep: oklch(0.555 0.114 100);
 
   --sky-1:     oklch(0.905 0.036 218);
   --sky-2:     oklch(0.945 0.024 175);
@@ -388,9 +392,14 @@ body.ready .chart-line{ stroke-dashoffset: 0; }
 .risk-top{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .risk-badge{ display:inline-flex; align-items:center; gap:9px; padding:6px 15px 6px 12px; border-radius:999px; font-weight:700; font-size:0.9rem; letter-spacing:0.02em; }
 .risk-badge .pdot{ width:10px; height:10px; border-radius:50%; }
-.risk-badge.baixo{ background: oklch(0.64 0.11 132 / 0.16); color: var(--moss-deep); } .risk-badge.baixo .pdot{ background: var(--moss); }
-.risk-badge.atencao{ background: oklch(0.72 0.135 78 / 0.18); color: var(--warn-deep); } .risk-badge.atencao .pdot{ background: var(--warn); }
-.risk-badge.alto{ background: oklch(0.585 0.155 38 / 0.16); color: var(--alert); } .risk-badge.alto .pdot{ background: var(--alert); animation: pulse 2.4s ease-out infinite; }
+/* 5 faixas do indice de risco 1-10 (ver painel.js/faixaDoIndice): 1-2 verde,
+   3-4 verde-amarelado, 5-6 amarelo, 7-8 laranja, 9-10 vermelho (pulsa,
+   igual ao "alto" de 3 faixas que existia antes). */
+.risk-badge.nivel-1{ background: oklch(0.64 0.11 132 / 0.16); color: var(--moss-deep); } .risk-badge.nivel-1 .pdot{ background: var(--moss); }
+.risk-badge.nivel-2{ background: oklch(0.680 0.122 105 / 0.16); color: var(--verdeamarelo-deep); } .risk-badge.nivel-2 .pdot{ background: var(--verdeamarelo); }
+.risk-badge.nivel-3{ background: oklch(0.72 0.135 78 / 0.18); color: var(--warn-deep); } .risk-badge.nivel-3 .pdot{ background: var(--warn); }
+.risk-badge.nivel-4{ background: oklch(0.610 0.120 55 / 0.18); color: var(--terra-deep); } .risk-badge.nivel-4 .pdot{ background: var(--terra); }
+.risk-badge.nivel-5{ background: oklch(0.585 0.155 38 / 0.16); color: var(--alert); } .risk-badge.nivel-5 .pdot{ background: var(--alert); animation: pulse 2.4s ease-out infinite; }
 .risk-when{ font-size:0.76rem; color:var(--muted); }
 .risk-headline{ font-family: var(--font-display); font-optical-sizing:auto; font-weight:600; font-size: clamp(1.5rem, 6vw, 2.15rem); line-height:1.08; color: var(--pine-deep); margin: 12px 0 0; letter-spacing:0.003em; }
 .risk-drivers{ font-size: 0.95rem; color: var(--ink-2); margin: 9px 0 0; max-width: 60ch; line-height:1.5; }
@@ -402,6 +411,7 @@ body.ready .chart-line{ stroke-dashoffset: 0; }
 .qk .v small{ font-size:0.72rem; color:var(--ink-2); font-weight:600; }
 .qk .sub{ font-size:0.72rem; color:var(--muted); margin-top:2px; }
 .qk.hl{ background: linear-gradient(180deg, oklch(0.72 0.135 78 / 0.09), var(--surface)); border-color: oklch(0.72 0.135 78 / 0.28); }
+.idx-nota{ font-size:0.62em; color:var(--muted); font-weight:600; margin-left:1px; cursor:help; vertical-align:super; }
 
 /* Aviso legal, discreto e no fim da pagina */
 .disclaimer{ margin: 18px 2px 4px; font-size:0.72rem; line-height:1.5; color: var(--muted); }
@@ -485,6 +495,7 @@ body.storm{
   --line: oklch(0.82 0.05 230 / 0.20); --line-2: oklch(0.82 0.05 230 / 0.30);
   --pine-deep: oklch(0.96 0.03 205); --pine: oklch(0.87 0.05 205);
   --moss-deep: oklch(0.80 0.11 150); --teal-deep: oklch(0.82 0.10 210); --teal: oklch(0.80 0.10 205); --terra-deep: oklch(0.82 0.13 55); --terra: oklch(0.80 0.13 55);
+  --verdeamarelo-deep: oklch(0.83 0.11 100); --verdeamarelo: oklch(0.81 0.11 105);
   --warn-deep: oklch(0.84 0.13 82); --alert: oklch(0.74 0.17 33);
   /* Escala do mapa de calor no escuro: mesmos degraus, luminancia invertida. */
   --hm-nd: oklch(0.30 0.015 240);
