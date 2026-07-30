@@ -20,8 +20,15 @@ export function computeRisk(){
   const obs12=APP.NET.rain12, obsNow=APP.NET.rainNow;
   const nowcast = APP.FC?APP.FC.nowMm:0;
   const raining = (obsNow!=null&&obsNow>=0.2) || nowcast>=0.3 || maxTrend>=8;
-  // situacao AGORA = veredito do detector (chuva caida + regua observada)
-  let cur = F.ok?F.level:0;
+  /* situacao AGORA = veredito do detector (chuva caida + regua observada).
+     Com `arrefeceu` (regua confirmando descida, sem chuva), o canal de chuva
+     medida (F.chuva) e so um corroborador redundante de quando a regua nao
+     e confiavel — com regua fresca dizendo que ja baixou, ele nao deve
+     segurar "Risco atencao" sozinho. Aferido 29/07/2026 20h34: BE01 a 89,9 %
+     da cota e caindo, chuva de 24 h ainda em 77 % do limiar (solo encharcado)
+     — sem este ajuste o selo dizia "Risco atencao" com o rio ja abaixo do
+     limite, sem chuva e sem previsao. */
+  let cur = F.ok ? (F.arrefeceu ? F.rio : F.level) : 0;
   if(nowcast>=10) cur=Math.min(3,cur+1);
   // chuva prevista que ja estoura o limiar dentro de 12 h e ATENCAO no minimo
   if(F.ok&&F.eta!=null&&F.eta<=12) cur=Math.max(cur,2);
@@ -194,6 +201,15 @@ function canalRio(secou){
      regua qualquer secando nao descreve o rio que esta acima do limite. */
   const desce = !!estacao && estacao.trend!=null && estacao.trend<=-RECUO_QUEDA;
   const recuo = secou && desce && frac < pico6-RECUO_MARGEM;
+  /* Liberacao da memoria do pico6 (abaixo) e mais frouxa que `desce`: exige so
+     chuva parada e tendencia nao subindo, nao a queda forte de RECUO_QUEDA.
+     Aferida em 29/07/2026 20h34: BE01 em 89,9 % da cota (ja abaixo do limite),
+     pico6 101 %, tendencia -1,6 cm/h, sem chuva — com o gatilho antigo
+     (`!desce`, que exige <=-2 cm/h) o motor ainda gritava "acontecendo" porque
+     a queda desacelera perto da base e nunca cruzava -2 cm/h. Exigir so "nao
+     esta subindo" com chuva parada basta: um blip de regua suja produz
+     tendencia positiva ou nula por ruido, nao uma serie de leituras caindo. */
+  const arrefeceu = secou && estacao && estacao.trend!=null && estacao.trend<=0;
   let nivel=0;
   if(recuo){
     if(frac>=FLOOD_FRAC) nivel=3;
@@ -202,18 +218,17 @@ function canalRio(secou){
   }
   /* pico6>=1 mantem "enchente" enquanto uma leitura mais baixa isolada nao
      pode apagar o alarme (regua suja, degrau de telemetria). Isso so vale
-     ENQUANTO a tendencia ainda nao confirmou queda: com `desce` true (Theil-Sen
-     negativo, nao ruido de uma leitura) o pico de 6 h vira memoria velha, nao
-     evidencia de enchente em curso — foi o que prendeu "enchente grande" na
-     tela com a BE01 ja 5 % abaixo do limite e caindo ha horas, so porque o
-     recuo (que exige queda de 15 pontos do pico) ainda nao tinha vencido a
-     margem. Aferido em 29/07/2026 18h: frac 94,9 %, pico6 108 %, tendencia
-     -2 cm/h, sem chuva — sem o `&&!desce` o motor gritava "acontecendo" com
-     o rio de volta abaixo do limite. */
-  else if(frac>=1 || (pico6>=1&&frac>=0.85&&!desce) || (frac>=0.85&&subida>=3)) nivel=3;
-  else if(frac>=0.85) nivel=2;
+     ENQUANTO a tendencia ainda nao confirmou queda (`arrefeceu`, ver acima) —
+     o pico de 6 h vira memoria velha, nao evidencia de enchente em curso. */
+  else if(frac>=1 || (pico6>=1&&frac>=0.85&&!arrefeceu) || (frac>=0.85&&subida>=3)) nivel=3;
+  /* a faixa 0,85-1,00 e precursora de SUBIDA (ver docstring do canal, acima):
+     avisa que o rio esta se aproximando do limite por baixo. Sem o `&&!arrefeceu`
+     ela tambem disparava numa DESCIDA que ja cruzou o limite e so nao chegou
+     na base — river em 89,9 % da cota, caindo, sem chuva, ainda acendia
+     "Risco atencao" no topo da pagina (aferido 29/07/2026 20h34). */
+  else if(frac>=0.85&&!arrefeceu) nivel=2;
   else if(frac>=0.70) nivel=1;
-  return {nivel, frac, pico6, subida, recuo, estacao, reguas};
+  return {nivel, frac, pico6, subida, recuo, arrefeceu, estacao, reguas};
 }
 /* CANAL CHUVA, parte futura: hora a hora ate 48 h. O solo tambem satura com a
    chuva prevista, entao o limiar continua descendo enquanto chove — e o
@@ -271,8 +286,7 @@ function cityFlood(){
   const chuva = agora.ratio>=1?3 : agora.ratio>=0.75?2 : agora.ratio>=0.5?1 : 0;
   const mag=magnitude(agora, rio, futuro.pico);
   return {ok:true, level:Math.max(rio.nivel,chuva),
-          rio:rio.nivel, chuva,
-          rf:rio.frac, rf6:rio.pico6, rise:rio.subida, recuo:rio.recuo, rioSt:rio.estacao, nGauge:rio.reguas,
+          rio:rio.nivel, chuva, arrefeceu:rio.arrefeceu,
           api, sat:agora.sat, solo:soilLabel(agora.sat), lim12:limite12(agora.sat),
           now:agora, peak:futuro.pico, peakAt:futuro.picoEm, eta:futuro.eta, etaRio:etaDoRio(rio),
           sev:mag.sev, sevFut:mag.sevFut, forca:mag.forca, excesso:mag.excesso};
