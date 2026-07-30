@@ -190,6 +190,12 @@ function indiceAgora(agoraRatio, rio, eta){
   const nowcast=APP.FC?APP.FC.nowMm:0;
   idx+=escalaRisco(ESCALA_NOWCAST, nowcast);
   if(eta!=null&&eta<=12) idx=Math.max(idx,5);
+  /* Piso: se o proprio canalRio ja confirmou nivel 3 (frac>=1, seu ramo
+     incondicional que nao testa arrefeceu — rio de fato ainda acima do
+     limite agora), o indice nunca pode ficar baixo so porque o reforco da
+     regua foi suprimido por arrefeceu. O piso reage ao veredito que o motor
+     ja calculou, nao decide nada por conta propria. */
+  if(rio.nivel>=3) idx=Math.max(idx,9);
   return Math.round(Math.min(10, Math.max(1, idx)));
 }
 /* indice "futuro": o pior entre as tres janelas de previsao ja usadas

@@ -162,9 +162,12 @@ function floodCard(F){
   /* O VALOR vira o mesmo indice 1-10 do selo (F.indice — fonte unica, ver
      cityFlood() em enchente.js), em vez da palavra-veredito
      (grande/acontecendo/iminente/possivel/improvavel). O "sub" (linha
-     pequena de explicacao) e o "u" (contexto de tempo: "agora"/"em Xh"/
-     "nas proximas 48h") continuam EXATAMENTE como estavam — sao descricao
-     de fato, nao categoria de risco, entao nao precisam virar numero.
+     pequena de explicacao) continua igual — e descricao de fato, nao
+     categoria de risco. O "u" (contexto de tempo: "agora"/"em Xh"/
+     "nas proximas 48h") passou a vir SEMPRE preenchido, inclusive nos tres
+     ramos de enchente confirmada, que antes deixavam "u" vazio quando a
+     magnitude era grande pra a linha nao quebrar com o veredito longo por
+     extenso; o valor curto "N/10" nao tem mais esse problema.
      `hl` (realce visual do card) passa a acompanhar o proprio indice
      (>=7, faixas laranja/vermelho) em vez de ligado por branch — antes TODO
      estado "preditivo" (ate "possivel", o mais fraco) ja vinha com hl=true;
@@ -180,7 +183,7 @@ function floodCard(F){
   if(F.eta!=null)
     return qk("Enchente na cidade",v, quandoTxt(F.eta),
       "pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm", hl);
-  return qk("Enchente na cidade",v,"nas próximas 48 h", "chuva prevista abaixo do limite", hl);
+  return qk("Enchente na cidade",v,"nas próximas 48 h", "chuva prevista abaixo do limite", false);
 }
 
 function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }
