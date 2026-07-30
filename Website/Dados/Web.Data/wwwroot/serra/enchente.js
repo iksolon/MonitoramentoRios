@@ -135,6 +135,73 @@ const RECUO_SECO_H=3, RECUO_SECO_MM=2, RECUO_QUEDA=2, RECUO_MARGEM=0.15;
    quem manda continua sendo o limite da regua, que da a antecedencia. */
 const FLOOD_FRAC=1.45;
 
+/* ===== INDICE DE RISCO (1-10) ==========================================
+   Camada de EXIBICAO por cima do motor acima — nao muda nenhuma regra de
+   deteccao (canalRio/cityFlood continuam decidindo os estados internos do
+   jeito que sempre decidiram). So remapeia os MESMOS sinais numa escala
+   continua de 1 a 10, porque uma palavra ("risco baixo"/"improvavel") tem
+   que escolher um corte binario que a rede de sensores nao sustenta.
+
+   A rede so tem duas reguas confiaveis (LEVEL_TRUST em config.js: GLLS e
+   BE01, as duas na bacia do Areia) e nenhuma no Rio Rolante, que tambem
+   alaga a cidade. BE01 ainda cai do ar com frequencia. Por isso a regua
+   NUNCA pode dominar sozinha o indice — quem manda e chuva medida + solo
+   (cobre a bacia inteira, sempre disponivel); a regua so reforca quando
+   esta fresca e concorda, com teto proprio bem mais baixo.
+
+   Pontos de corte aferidos com o UNICO evento real medido ate agora
+   (29/07/2026) — ver docs/superpowers/specs/2026-07-30-indice-risco-
+   numerico-design.md para a justificativa de cada ancora. Conforme mais
+   enchentes reais forem confirmadas em campo, estes pontos devem ser
+   reajustados; e por isso ficam isolados aqui, numa unica tabela por
+   canal, em vez de espalhados pelo codigo. */
+function escala(pontos, x){
+  if(x<=pontos[0][0]) return pontos[0][1];
+  for(let i=1;i<pontos.length;i++){
+    const [x0,y0]=pontos[i-1], [x1,y1]=pontos[i];
+    if(x<=x1) return y0+(y1-y0)*(x-x0)/(x1-x0);
+  }
+  return pontos[pontos.length-1][1];
+}
+/* Base: chuva medida vs. limiar ajustado pelo solo (agora.ratio). 0,75 e
+   1,00 sao os mesmos cortes que ja viram chuva=2/chuva=3 hoje; 1,35 e o
+   SEV_GRANDE ja calibrado. */
+const ESCALA_CHUVA=[[0,1],[0.5,4],[0.75,6],[1.0,8],[1.35,10]];
+/* Reforco da regua (rio.frac), teto em 7 — nunca chega em 10 sozinha,
+   porque e 1-2 sensores intermitentes, nunca no Rio Rolante. */
+const ESCALA_REGUA=[[0,1],[0.85,4],[1.0,6],[1.35,7]];
+/* Previsao: mesmos cortes de mm que computeRisk ja usa (15/40/80mm no pico
+   do dia; 10mm em 24h; 60/100mm em 72h) — tres testes independentes, o
+   pior vence, igual a logica OR que ja existia. Teto em 9: previsao nunca
+   vira confirmacao. */
+const ESCALA_PREV_DIA=[[0,1],[15,4],[40,6],[80,9]];
+const ESCALA_PREV_24=[[0,1],[10,4]];
+const ESCALA_PREV_72=[[0,1],[60,6],[100,9]];
+/* indice "agora": o maior entre chuva+solo e o reforco da regua (quando
+   fresca, confiavel, e nao em recuo confirmado — reaproveita `arrefeceu`).
+   nowcast forte (chovendo >=10mm/h agora) da um empurrao extra; previsao
+   que bate o limiar em ate 12h garante piso de 5 (faixa "atencao"). */
+function indiceAgora(agoraRatio, rio, arrefeceu, eta){
+  const base=escala(ESCALA_CHUVA, agoraRatio);
+  const reforco=(rio.estacao && rio.estacao.lvFresh && !arrefeceu)
+    ? escala(ESCALA_REGUA, rio.frac) : 0;
+  let idx=Math.max(base, reforco);
+  const nowcast=APP.FC?APP.FC.nowMm:0;
+  if(nowcast>=10) idx+=2;
+  if(eta!=null&&eta<=12) idx=Math.max(idx,5);
+  return Math.round(Math.min(10, Math.max(1, idx)));
+}
+/* indice "futuro": o pior entre as tres janelas de previsao ja usadas
+   hoje, cada uma na sua propria escala com o mesmo teto (9). */
+function indiceFuturo(){
+  if(!APP.FC) return 1;
+  const pd=APP.FC.peakDay;
+  const porDia=escala(ESCALA_PREV_DIA, pd?pd.mm:0);
+  const porNext72=escala(ESCALA_PREV_72, APP.FC.next72||0);
+  const porNext24=escala(ESCALA_PREV_24, APP.FC.next24||0);
+  return Math.round(Math.max(porDia, porNext72, porNext24));
+}
+
 function soilIndex(obs){ let a=0; for(let i=0;i<obs.length;i++) a=a*SOIL_K+(obs[i]||0); return a; }
 function soilSat(api){ return clamp((api-SOIL_DRY)/(SOIL_WET-SOIL_DRY),0,1); }
 /* Limiar da janela FIXA de 12 h com o solo atual. O motor continua decidindo
