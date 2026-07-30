@@ -545,8 +545,8 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 
 /* ===== Aviso: versao em testes (selo fixo, atravessado) ===== */
 .test-ribbon{
-  position: fixed; top: 108px; right: 0; z-index: 30;
-  width: 210px; padding: 16px 30px 14px 16px;
+  position: fixed; top: 132px; right: 0; z-index: 30;
+  width: 246px; padding: 18px 34px 16px 18px;
   border-radius: 0 0 0 var(--r-lg);
   background: linear-gradient(135deg, oklch(0.470 0.082 212), oklch(0.255 0.052 160));
   color: oklch(0.97 0.012 200);
@@ -561,17 +561,17 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 }
 .test-ribbon .tr-close:hover{ background: oklch(1 0 0 / 0.28); }
 .test-ribbon .tr-tag{
-  display:inline-block; font-size:0.66rem; font-weight:700; text-transform:uppercase;
+  display:inline-block; font-size:0.79rem; font-weight:700; text-transform:uppercase;
   letter-spacing:0.06em; background: oklch(1 0 0 / 0.18); border-radius:999px;
-  padding:2px 9px; margin-bottom:6px;
+  padding:2px 10px; margin-bottom:7px;
 }
-.test-ribbon .tr-txt{ margin:0 0 6px; font-size:0.78rem; line-height:1.4; }
-.test-ribbon .tr-cta{ margin:0; font-size:0.72rem; line-height:1.4; color: oklch(0.90 0.03 200); }
+.test-ribbon .tr-txt{ margin:0 0 7px; font-size:0.94rem; line-height:1.4; }
+.test-ribbon .tr-cta{ margin:0; font-size:0.86rem; line-height:1.4; color: oklch(0.90 0.03 200); }
 .test-ribbon .tr-cta a{ color: inherit; font-weight:700; text-decoration:underline; }
 @media (max-width:620px){
-  .test-ribbon{ top: 60px; width: 140px; padding: 11px 22px 10px 12px; transform: rotate(20deg); }
-  .test-ribbon .tr-tag{ font-size:0.56rem; padding:1px 6px; margin-bottom:4px; }
-  .test-ribbon .tr-txt{ font-size:0.62rem; margin-bottom:4px; }
-  .test-ribbon .tr-cta{ font-size:0.56rem; }
-  .test-ribbon .tr-close{ width:16px; height:16px; line-height:14px; font-size:0.78rem; top:4px; right:4px; }
+  .test-ribbon{ top: 68px; width: 164px; padding: 12px 24px 11px 14px; transform: rotate(20deg); }
+  .test-ribbon .tr-tag{ font-size:0.67rem; padding:1px 7px; margin-bottom:5px; }
+  .test-ribbon .tr-txt{ font-size:0.74rem; margin-bottom:5px; }
+  .test-ribbon .tr-cta{ font-size:0.67rem; }
+  .test-ribbon .tr-close{ width:18px; height:18px; line-height:16px; font-size:0.9rem; top:4px; right:4px; }
 }
