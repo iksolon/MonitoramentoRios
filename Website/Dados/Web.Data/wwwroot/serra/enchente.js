@@ -20,22 +20,16 @@ export function computeRisk(){
   const obs12=APP.NET.rain12, obsNow=APP.NET.rainNow;
   const nowcast = APP.FC?APP.FC.nowMm:0;
   const raining = (obsNow!=null&&obsNow>=0.2) || nowcast>=0.3 || maxTrend>=8;
-  /* situacao AGORA = veredito do detector (chuva caida + regua observada).
-     Com `arrefeceu` (regua confirmando descida, sem chuva), o canal de chuva
-     medida (F.chuva) e so um corroborador redundante de quando a regua nao
-     e confiavel — com regua fresca dizendo que ja baixou, ele nao deve
-     segurar "Risco atencao" sozinho. Aferido 29/07/2026 20h34: BE01 a 89,9 %
-     da cota e caindo, chuva de 24 h ainda em 77 % do limiar (solo encharcado)
-     — sem este ajuste o selo dizia "Risco atencao" com o rio ja abaixo do
-     limite, sem chuva e sem previsao. */
-  let cur = F.ok ? (F.arrefeceu ? F.rio : F.level) : 0;
-  if(nowcast>=10) cur=Math.min(3,cur+1);
-  // chuva prevista que ja estoura o limiar dentro de 12 h e ATENCAO no minimo
-  if(F.ok&&F.eta!=null&&F.eta<=12) cur=Math.max(cur,2);
-  let fut=0, futWhen="";
-  if(APP.FC){ const pd=APP.FC.peakDay; if((pd&&pd.mm>=80)||APP.FC.next72>=100) fut=3; else if((pd&&pd.mm>=40)||APP.FC.next72>=60) fut=2; else if((pd&&pd.mm>=15)||APP.FC.next24>=10) fut=1; if(pd) futWhen=pd.date; }
+  /* cur/fut vem prontos de cityFlood() — a mesma fonte que o card
+     "Enchente na cidade" le (F.indiceAgora/F.indiceFuturo), pra selo e card
+     nunca mostrarem numeros diferentes na mesma leitura. O nowcast forte, o
+     piso de previsao <=12h e o reforco/teto da regua (inclusive arrefeceu)
+     ja estao dentro de indiceAgora()/indiceFuturo(), em enchente.js. */
+  const cur = F.ok ? F.indiceAgora : 1;
+  const fut = F.ok ? F.indiceFuturo : 1;
+  const futWhen = (APP.FC&&APP.FC.peakDay) ? APP.FC.peakDay.date : "";
   const level=Math.max(cur,fut);
-  const drivenBy = fut>cur?"previsto":(cur>0?"agora":"previsto");
+  const drivenBy = fut>cur?"previsto":(cur>1?"agora":"previsto");
   APP.RISK={ level, cur, fut, drivenBy, raining, maxFrac, maxTrend, worst, nowcast, futWhen, obs12, obsNow, flood:F };
 }
 
