@@ -350,7 +350,7 @@ function magnitude(agora, rio, pico){
 }
 function cityFlood(){
   const obs=netRainSeries();
-  if(!obs&&!APP.FC) return {ok:false, level:0};
+  if(!obs&&!APP.FC) return {ok:false, level:0, indiceAgora:1, indiceFuturo:1, indice:1};
   const hist=obs||new Array(HMAX).fill(0);
   const rio=canalRio(chuvaRecente(hist,RECUO_SECO_H)<RECUO_SECO_MM);
   /* CANAL CHUVA, parte medida: o que ja caiu. */
@@ -359,8 +359,11 @@ function cityFlood(){
   const futuro=projetaChuva(hist, api, agora);
   const chuva = agora.ratio>=1?3 : agora.ratio>=0.75?2 : agora.ratio>=0.5?1 : 0;
   const mag=magnitude(agora, rio, futuro.pico);
+  const idxAgora=indiceAgora(agora.ratio, rio, futuro.eta);
+  const idxFuturo=indiceFuturo();
   return {ok:true, level:Math.max(rio.nivel,chuva),
           rio:rio.nivel, chuva, arrefeceu:rio.arrefeceu,
+          indiceAgora:idxAgora, indiceFuturo:idxFuturo, indice:Math.max(idxAgora,idxFuturo),
           api, sat:agora.sat, solo:soilLabel(agora.sat), lim12:limite12(agora.sat),
           now:agora, peak:futuro.pico, peakAt:futuro.picoEm, eta:futuro.eta, etaRio:etaDoRio(rio),
           sev:mag.sev, sevFut:mag.sevFut, forca:mag.forca, excesso:mag.excesso};
