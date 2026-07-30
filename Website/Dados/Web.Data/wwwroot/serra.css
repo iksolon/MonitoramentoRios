@@ -542,3 +542,36 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 .sbar .track .f.alerta,.sbar .track .f.inund{ background: linear-gradient(90deg, oklch(0.68 0.15 50), var(--alert)); }
 .sbar .track .f.observa{ background: linear-gradient(90deg, var(--teal-soft), var(--teal)); }
 .gauge .g-nm .lv-status{ margin-left:4px; }
+
+/* ===== Aviso: versao em testes (selo fixo, atravessado) ===== */
+.test-ribbon{
+  position: fixed; top: 34px; right: 0; z-index: 30;
+  width: 210px; padding: 16px 30px 14px 16px;
+  border-radius: 0 0 0 var(--r-lg);
+  background: linear-gradient(135deg, oklch(0.470 0.082 212), oklch(0.255 0.052 160));
+  color: oklch(0.97 0.012 200);
+  box-shadow: var(--sh-2);
+  transform: rotate(28deg);
+  transform-origin: 100% 0%;
+}
+.test-ribbon .tr-close{
+  position: absolute; top:6px; right:7px; width:20px; height:20px; line-height:18px;
+  border:none; border-radius:50%; background: oklch(1 0 0 / 0.16); color: inherit;
+  font-size:1rem; cursor:pointer; padding:0; -webkit-appearance:none;
+}
+.test-ribbon .tr-close:hover{ background: oklch(1 0 0 / 0.28); }
+.test-ribbon .tr-tag{
+  display:inline-block; font-size:0.66rem; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.06em; background: oklch(1 0 0 / 0.18); border-radius:999px;
+  padding:2px 9px; margin-bottom:6px;
+}
+.test-ribbon .tr-txt{ margin:0 0 6px; font-size:0.78rem; line-height:1.4; }
+.test-ribbon .tr-cta{ margin:0; font-size:0.72rem; line-height:1.4; color: oklch(0.90 0.03 200); }
+.test-ribbon .tr-cta a{ color: inherit; font-weight:700; text-decoration:underline; }
+@media (max-width:620px){
+  .test-ribbon{ top: 24px; width: 140px; padding: 11px 22px 10px 12px; transform: rotate(20deg); }
+  .test-ribbon .tr-tag{ font-size:0.56rem; padding:1px 6px; margin-bottom:4px; }
+  .test-ribbon .tr-txt{ font-size:0.62rem; margin-bottom:4px; }
+  .test-ribbon .tr-cta{ font-size:0.56rem; }
+  .test-ribbon .tr-close{ width:16px; height:16px; line-height:14px; font-size:0.78rem; top:4px; right:4px; }
+}
