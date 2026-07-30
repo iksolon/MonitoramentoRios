@@ -545,7 +545,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 
 /* ===== Aviso: versao em testes (selo fixo, atravessado) ===== */
 .test-ribbon{
-  position: fixed; top: 34px; right: 0; z-index: 30;
+  position: fixed; top: 108px; right: 0; z-index: 30;
   width: 210px; padding: 16px 30px 14px 16px;
   border-radius: 0 0 0 var(--r-lg);
   background: linear-gradient(135deg, oklch(0.470 0.082 212), oklch(0.255 0.052 160));
@@ -569,7 +569,7 @@ body.storm .nc-st b, body.storm .nc-tag b{ color: var(--ink); }
 .test-ribbon .tr-cta{ margin:0; font-size:0.72rem; line-height:1.4; color: oklch(0.90 0.03 200); }
 .test-ribbon .tr-cta a{ color: inherit; font-weight:700; text-decoration:underline; }
 @media (max-width:620px){
-  .test-ribbon{ top: 24px; width: 140px; padding: 11px 22px 10px 12px; transform: rotate(20deg); }
+  .test-ribbon{ top: 60px; width: 140px; padding: 11px 22px 10px 12px; transform: rotate(20deg); }
   .test-ribbon .tr-tag{ font-size:0.56rem; padding:1px 6px; margin-bottom:4px; }
   .test-ribbon .tr-txt{ font-size:0.62rem; margin-bottom:4px; }
   .test-ribbon .tr-cta{ font-size:0.56rem; }
