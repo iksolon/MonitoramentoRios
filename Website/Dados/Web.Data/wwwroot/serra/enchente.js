@@ -155,8 +155,8 @@ const FLOOD_FRAC=1.45;
    enchentes reais forem confirmadas em campo, estes pontos devem ser
    reajustados; e por isso ficam isolados aqui, numa unica tabela por
    canal, em vez de espalhados pelo codigo. */
-function escala(pontos, x){
-  if(x<=pontos[0][0]) return pontos[0][1];
+function escalaRisco(pontos, x){
+  if(!(x>pontos[0][0])) return pontos[0][1];
   for(let i=1;i<pontos.length;i++){
     const [x0,y0]=pontos[i-1], [x1,y1]=pontos[i];
     if(x<=x1) return y0+(y1-y0)*(x-x0)/(x1-x0);
@@ -170,6 +170,12 @@ const ESCALA_CHUVA=[[0,1],[0.5,4],[0.75,6],[1.0,8],[1.35,10]];
 /* Reforco da regua (rio.frac), teto em 7 — nunca chega em 10 sozinha,
    porque e 1-2 sensores intermitentes, nunca no Rio Rolante. */
 const ESCALA_REGUA=[[0,1],[0.85,4],[1.0,6],[1.35,7]];
+/* Chuva caindo AGORA (mm/h do nowcast) empurra o indice suavemente: 10 mm/h
+   e o mesmo corte que ja valia o bonus fixo (+2) na escala 0-3 antiga de
+   computeRisk — aqui vira rampa em vez de degrau seco, que e o padrao de
+   falha ("veredito piscando") que o proprio motor ja documentou noutro
+   limiar (ver comentario sobre o limiar 72<->80mm mais acima no arquivo). */
+const ESCALA_NOWCAST=[[0,0],[10,2]];
 /* Previsao: mesmos cortes de mm que computeRisk ja usa (15/40/80mm no pico
    do dia; 10mm em 24h; 60/100mm em 72h) — tres testes independentes, o
    pior vence, igual a logica OR que ja existia. Teto em 9: previsao nunca
@@ -178,16 +184,17 @@ const ESCALA_PREV_DIA=[[0,1],[15,4],[40,6],[80,9]];
 const ESCALA_PREV_24=[[0,1],[10,4]];
 const ESCALA_PREV_72=[[0,1],[60,6],[100,9]];
 /* indice "agora": o maior entre chuva+solo e o reforco da regua (quando
-   fresca, confiavel, e nao em recuo confirmado — reaproveita `arrefeceu`).
-   nowcast forte (chovendo >=10mm/h agora) da um empurrao extra; previsao
-   que bate o limiar em ate 12h garante piso de 5 (faixa "atencao"). */
-function indiceAgora(agoraRatio, rio, arrefeceu, eta){
-  const base=escala(ESCALA_CHUVA, agoraRatio);
-  const reforco=(rio.estacao && rio.estacao.lvFresh && !arrefeceu)
-    ? escala(ESCALA_REGUA, rio.frac) : 0;
+   fresca, confiavel, e nao em recuo confirmado — reaproveita `rio.arrefeceu`,
+   que ja vem dentro do proprio `rio`). Chuva caindo agora soma a rampa de
+   ESCALA_NOWCAST; previsao que bate o limiar em ate 12h garante piso de 5
+   (faixa "atencao"). */
+function indiceAgora(agoraRatio, rio, eta){
+  const base=escalaRisco(ESCALA_CHUVA, agoraRatio);
+  const reforco=(rio.estacao && rio.estacao.lvFresh && !rio.arrefeceu)
+    ? escalaRisco(ESCALA_REGUA, rio.frac) : 0;
   let idx=Math.max(base, reforco);
   const nowcast=APP.FC?APP.FC.nowMm:0;
-  if(nowcast>=10) idx+=2;
+  idx+=escalaRisco(ESCALA_NOWCAST, nowcast);
   if(eta!=null&&eta<=12) idx=Math.max(idx,5);
   return Math.round(Math.min(10, Math.max(1, idx)));
 }
@@ -196,9 +203,9 @@ function indiceAgora(agoraRatio, rio, arrefeceu, eta){
 function indiceFuturo(){
   if(!APP.FC) return 1;
   const pd=APP.FC.peakDay;
-  const porDia=escala(ESCALA_PREV_DIA, pd?pd.mm:0);
-  const porNext72=escala(ESCALA_PREV_72, APP.FC.next72||0);
-  const porNext24=escala(ESCALA_PREV_24, APP.FC.next24||0);
+  const porDia=escalaRisco(ESCALA_PREV_DIA, pd?pd.mm:0);
+  const porNext72=escalaRisco(ESCALA_PREV_72, APP.FC.next72||0);
+  const porNext24=escalaRisco(ESCALA_PREV_24, APP.FC.next24||0);
   return Math.round(Math.max(porDia, porNext72, porNext24));
 }
 
