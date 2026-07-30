@@ -1,3 +1,4 @@
+/* Vendor: Chart.js 4.4.7 minificado - nao refatorar. As escritas a.style.height/width (retinaScale) sao geometria de desenho: dimensionam o canvas em px CSS pelo devicePixelRatio. */
 /**
  * Skipped minification because the original files appears to be already minified.
  * Original file: /npm/chart.js@4.4.7/dist/chart.umd.js

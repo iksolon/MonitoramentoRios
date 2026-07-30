@@ -6,6 +6,7 @@
     <meta http-equiv="refresh" content="60">
     <title>Dados das Estações</title>
     <style>
+        /* ===================== TABELAS ===================== */
         table {
             border-collapse: collapse;
             margin-top: 20px;
@@ -20,121 +21,76 @@
         th {
             background-color: #f2f2f2;
         }
+
+        /* ===================== COR DE FUNDO POR ESTAÇÃO =====================
+           Cada estação recebe uma cor para separar as linhas a olho.
+           As duas estações de referência têm cor fixa; as demais pegam uma cor
+           da paleta pelo hash do nome (a mesma estação cai sempre na mesma). */
+        .corEstacaoRB01 {
+            background-color: azure;
+        }
+
+        .corEstacaoBE01 {
+            background-color: darkseagreen;
+        }
+
+        .corEstacao0 {
+            background-color: lightblue;
+        }
+
+        .corEstacao1 {
+            background-color: lightgreen;
+        }
+
+        .corEstacao2 {
+            background-color: lightgoldenrodyellow;
+        }
+
+        .corEstacao3 {
+            background-color: antiquewhite;
+        }
+
+        .corEstacao4 {
+            background-color: aliceblue;
+        }
+
+        .corEstacao5 {
+            background-color: lightpink;
+        }
+
+        .corEstacao6 {
+            background-color: aquamarine;
+        }
+
+        .corEstacao7 {
+            background-color: beige;
+        }
+
+        .corEstacao8 {
+            background-color: yellowgreen;
+        }
+
+        .corEstacao9 {
+            background-color: skyblue;
+        }
     </style>
     <script type="text/javascript" src="helpers.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            // Fazendo o request para o endpoint
-            fetch('/estacoes')
-                .then(response => response.json())
-                .then(data => {
-                    data.sort((a, b) => {
-                        if (a.nomeEstacao.startsWith('EX')) return 1; // Final
-                        if (a.nomeEstacao.startsWith('RS')) {
+        /* ===================== CONSTANTES ===================== */
 
-                            if (b.nomeEstacao.startsWith('RS')) return a.nomeEstacao.localeCompare(b.nomeEstacao);
-                            return -1; // Começo
-                        }
-                        return a.nomeEstacao.localeCompare(b.nomeEstacao);
-                    });
+        // Paleta de cores de fundo (classes declaradas no <style> desta página)
+        const CLASSES_COR_ESTACAO = [
+            'corEstacao0', 'corEstacao1', 'corEstacao2', 'corEstacao3', 'corEstacao4',
+            'corEstacao5', 'corEstacao6', 'corEstacao7', 'corEstacao8', 'corEstacao9'
+        ];
+        // Estações de referência: cor fixa para achar rápido na lista
+        const CLASSES_COR_FIXA = new Map([
+            ['RSRL-RB01', 'corEstacaoRB01'],
+            ['RSRL-BE01', 'corEstacaoBE01']
+        ]);
 
-                    const tableBody = document.querySelector('#dadosEstacoes tbody');
-                    let espacoEX = false;
-                    data.forEach(e => {
-                        const row = document.createElement('tr');
+        /* ===================== UTILITÁRIOS ===================== */
 
-                        if (!espacoEX && e.nomeEstacao.startsWith("EX")) {
-                            espacoEX = true;
-                            const empty = document.createElement('tr');
-                            empty.innerHTML = '<td colspan=9> </td>';
-
-                            tableBody.appendChild(empty);
-                        }
-
-                        try {
-                            const ultimo = e.ultimoEnvio;
-
-                            if (ultimo) {
-                                let lvl = '-';
-                                if (ultimo.nivelRio || ultimo.nivelRio == 0) lvl = `${formatValue(ultimo.nivelRio, 1)}m (r${formatValue(ultimo.nivelRio_RAW, 1)})`;
-                                if (ultimo.precipitacao || ultimo.precipitacao == 0) lvl = `${formatValue(ultimo.precipitacao, 1)}mm/min (at${formatValue(ultimo.precipitacaoTotal, 1)}mm)`;
-
-                                let rawData = ultimo.rawData.startsWith('{') ? JSON.parse(ultimo.rawData) : { };
-                                const ipStr = `${ipCut(rawData.ip, 2, e.la)} @${nullSlice(rawData.mac, -5, e.serial)}`;
-                                const ipAddrFuncCopy = rawData && rawData.ip ? `onClick='copycb("http://${rawData.ip}")'` : '';
-
-                                row.innerHTML =
-                                `
-                                    <td>${new Date(ultimo.dataHoraDadosUTC).toLocaleString()}</td>
-                                    <td><a href="/live.html?estacao=${e.estacao}" target='_blank'>${e.nomeEstacao || e.estacao}</td>
-                                    <td>${formatValue(ultimo.tensaoBateria, 1)}v</td>
-                                    <td>${formatValue(ultimo.temperaturaAr, 1) || '-'}ºC | ${ultimo.umidadeAr || '-'}%</td>
-                                    <td>${lvl}</td>
-                                    <td>${wifiSignalToPercent(ultimo.forcaSinal)} @${nullSlice(rawData.bssid,-5,'')}</td>
-                                    <td ${ipAddrFuncCopy}>${ipStr}</td>
-                                `;
-                            } else {
-                                row.innerHTML =
-                                `
-                                    <td>-</td>
-                                    <td onClick=abrirEstacao('${e.estacao}')>${e.nomeEstacao || e.estacao}</td>
-                                    <td>-v</td>
-                                    <td>-ºC | -%</td>
-                                    <td>-m</td>
-                                    <td>-</td>
-                                    <td>-</td>
-                                `;
-                            }
-                            tableBody.appendChild(row);
-                            setColor(row, e.nomeEstacao);
-                        } catch (error) {
-                            console.error(error);
-                            row.innerHTML = `<td>[ERROR]</td><td colspan=6>${error}</td>`;
-                            tableBody.appendChild(row);
-                        }
-                    });
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar dados das estações:', error);
-                });
-
-        });
-        async function copycb(text) {
-            try {
-                await navigator.clipboard.writeText(text);
-                alert("Endereço Copiado: " + text);
-            } catch (error) {
-                console.error(error.message);
-            }
-        }
-
-        function ipCut(value, groups, def) {
-            if (value === null) return def;
-            if (value === undefined) return def;
-
-            let blocks = value.split('.');
-            return blocks.slice(-groups).join('.');
-        }
-
-
-        const colorList = ['lightblue', 'lightgreen', 'lightgoldenrodyellow', 'antiquewhite', 'aliceblue', 'lightpink', 'aquamarine', 'beige', 'yellowgreen', 'skyblue'];
-        function setColor(element, idEstacao) {
-            if (idEstacao === 'RSRL-RB01') {
-                element.style.backgroundColor = 'azure';
-                return;
-            }
-            if (idEstacao === 'RSRL-BE01') {
-                element.style.backgroundColor = 'darkseagreen';
-                return;
-            }
-
-            const hsh = getHash(idEstacao);
-            // Gera um índice determinístico baseado no idEstacao
-            const index = hsh % colorList.length;
-            // Define a cor de fundo do elemento com base no índice
-            element.style.backgroundColor = colorList[index];
-            //console.log(`Hash para '${idEstacao}': ${hsh} IX: ${index} Color: ${colorList[index]}`);
-        }
         function getHash(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
@@ -145,6 +101,167 @@
             return Math.abs(hash); // Garantimos que o valor seja positivo
         }
 
+        function classeCorEstacao(idEstacao) {
+            if (CLASSES_COR_FIXA.has(idEstacao)) return CLASSES_COR_FIXA.get(idEstacao);
+
+            const hsh = getHash(idEstacao);
+            // Gera um índice determinístico baseado no idEstacao
+            const index = hsh % CLASSES_COR_ESTACAO.length;
+            //console.log(`Hash para '${idEstacao}': ${hsh} IX: ${index} Classe: ${CLASSES_COR_ESTACAO[index]}`);
+            return CLASSES_COR_ESTACAO[index];
+        }
+
+        function pintaLinhaEstacao(element, idEstacao) {
+            element.classList.add(classeCorEstacao(idEstacao));
+        }
+
+        // Mantém só os últimos grupos do IP (o prefixo da rede não interessa aqui)
+        function ipCut(value, groups, def) {
+            if (value === null) return def;
+            if (value === undefined) return def;
+
+            let blocks = value.split('.');
+            return blocks.slice(-groups).join('.');
+        }
+
+        async function copycb(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                alert("Endereço Copiado: " + text);
+            } catch (error) {
+                console.error(error.message);
+            }
+        }
+
+        /* ===================== CARGA DE DADOS ===================== */
+
+        function carregaEstacoes() {
+            // Fazendo o request para o endpoint
+            fetch('/estacoes')
+                .then(response => response.json())
+                .then(data => renderEstacoes(ordenaEstacoes(data)))
+                .catch(error => {
+                    console.error('Erro ao carregar dados das estações:', error);
+                });
+        }
+
+        /* ===================== CÁLCULO ===================== */
+
+        // Locais (RS*) em ordem alfabética primeiro, externas (EX*) no fim
+        function ordenaEstacoes(data) {
+            return data.sort((a, b) => {
+                if (a.nomeEstacao.startsWith('EX')) return 1; // Final
+                if (a.nomeEstacao.startsWith('RS')) {
+
+                    if (b.nomeEstacao.startsWith('RS')) return a.nomeEstacao.localeCompare(b.nomeEstacao);
+                    return -1; // Começo
+                }
+                return a.nomeEstacao.localeCompare(b.nomeEstacao);
+            });
+        }
+
+        // Estação com régua mostra nível (e o valor cru do sensor);
+        // estação de pluviômetro mostra a taxa de chuva e o acumulado
+        function resumoMedicao(ultimo) {
+            let lvl = '-';
+            if (ultimo.nivelRio || ultimo.nivelRio == 0) lvl = `${formatValue(ultimo.nivelRio, 1)}m (r${formatValue(ultimo.nivelRio_RAW, 1)})`;
+            if (ultimo.precipitacao || ultimo.precipitacao == 0) lvl = `${formatValue(ultimo.precipitacao, 1)}mm/min (at${formatValue(ultimo.precipitacaoTotal, 1)}mm)`;
+
+            return lvl;
+        }
+
+        /* ===================== RENDER ===================== */
+
+        function renderEstacoes(data) {
+            const tableBody = document.querySelector('#dadosEstacoes tbody');
+            let espacoEX = false;
+
+            data.forEach(e => {
+                if (!espacoEX && e.nomeEstacao.startsWith("EX")) {
+                    espacoEX = true;
+                    tableBody.appendChild(montaLinhaVazia());
+                }
+
+                try {
+                    const row = e.ultimoEnvio ? montaLinhaComEnvio(e) : montaLinhaSemEnvio(e);
+                    tableBody.appendChild(row);
+                    pintaLinhaEstacao(row, e.nomeEstacao);
+                } catch (error) {
+                    console.error(error);
+                    tableBody.appendChild(montaLinhaErro(error));
+                }
+            });
+        }
+
+        function montaLinhaVazia() {
+            const empty = document.createElement('tr');
+            empty.innerHTML = '<td colspan=9> </td>';
+            return empty;
+        }
+
+        function montaLinhaErro(error) {
+            const row = document.createElement('tr');
+            row.innerHTML = `<td>[ERROR]</td><td colspan=6>${error}</td>`;
+            return row;
+        }
+
+        function montaLinhaComEnvio(e) {
+            const ultimo = e.ultimoEnvio;
+            const rawData = ultimo.rawData.startsWith('{') ? JSON.parse(ultimo.rawData) : { };
+            const ipStr = `${ipCut(rawData.ip, 2, e.la)} @${nullSlice(rawData.mac, -5, e.serial)}`;
+            // Clicar na célula copia o endereço do painel da estação
+            const attrCopiaIp = rawData && rawData.ip ? `data-copiar="http://${rawData.ip}"` : '';
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date(ultimo.dataHoraDadosUTC).toLocaleString()}</td>
+                <td><a href="/live.html?estacao=${e.estacao}" target='_blank'>${e.nomeEstacao || e.estacao}</td>
+                <td>${formatValue(ultimo.tensaoBateria, 1)}v</td>
+                <td>${formatValue(ultimo.temperaturaAr, 1) || '-'}ºC | ${ultimo.umidadeAr || '-'}%</td>
+                <td>${resumoMedicao(ultimo)}</td>
+                <td>${wifiSignalToPercent(ultimo.forcaSinal)} @${nullSlice(rawData.bssid, -5, '')}</td>
+                <td ${attrCopiaIp}>${ipStr}</td>
+                `;
+            return row;
+        }
+
+        // Estação cadastrada que nunca enviou dado: só o nome, clicável
+        function montaLinhaSemEnvio(e) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>-</td>
+                <td data-abrir-estacao="${e.estacao}">${e.nomeEstacao || e.estacao}</td>
+                <td>-v</td>
+                <td>-ºC | -%</td>
+                <td>-m</td>
+                <td>-</td>
+                <td>-</td>
+                `;
+            return row;
+        }
+
+        /* ===================== EVENTOS / INIT ===================== */
+
+        // As linhas nascem depois da carga, então os cliques ficam delegados no tbody
+        function registraCliquesTabela() {
+            const tableBody = document.querySelector('#dadosEstacoes tbody');
+
+            tableBody.addEventListener('click', event => {
+                const celulaCopiar = event.target.closest('[data-copiar]');
+                if (celulaCopiar) {
+                    copycb(celulaCopiar.dataset.copiar);
+                    return;
+                }
+
+                const celulaEstacao = event.target.closest('[data-abrir-estacao]');
+                if (celulaEstacao) abrirEstacao(celulaEstacao.dataset.abrirEstacao);
+            });
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            registraCliquesTabela();
+            carregaEstacoes();
+        });
     </script>
 </head>
 <body>

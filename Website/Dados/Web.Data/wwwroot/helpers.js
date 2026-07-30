@@ -1,7 +1,17 @@
+/* Funções compartilhadas pelas páginas do monitoramento dos rios. */
+
+/* ============================================================
+   FORMATAÇÃO DE NÚMEROS
+   Tudo que vira texto na tela passa por aqui: null/NaN sempre saem como '-'.
+   ============================================================ */
 function formatValue(value, decimals = 0) {
     if (value == null) return '-'; // Verifica null ou undefined
     if (isNaN(value)) return '-'; // Verifica null ou undefined
     return decimals === 0 ? Math.round(value) : value.toFixed(decimals);
+}
+function formatValueUnit(value, decimals, unit) {
+    if (value == null) return '-'; // Verifica null ou undefined
+    return (decimals === 0 ? Math.round(value) : value.toFixed(decimals)) + "" + unit;
 }
 function round(value, decimals) {
     if (value == undefined) return null;
@@ -12,9 +22,28 @@ function round(value, decimals) {
     var exp = Math.pow(10, decimals);
     return Math.round(value * exp) / exp;
 }
-function formatValueUnit(value, decimals, unit) {
-    if (value == null) return '-'; // Verifica null ou undefined
-    return (decimals === 0 ? Math.round(value) : value.toFixed(decimals)) + "" + unit;
+
+/* ============================================================
+   DATA E HORA
+   Os dados chegam do servidor em UTC sem sufixo 'Z'; adicionaZ conserta
+   isso antes de qualquer conversão. O fuso de exibição é -3.
+   ============================================================ */
+function adicionaZ(strDataHora) {
+    if (!strDataHora.endsWith('Z')) strDataHora = strDataHora + 'Z';
+    return strDataHora;
+}
+function isOlderThan(timeString, hours) {
+    if (!timeString.endsWith('Z')) timeString = timeString + 'Z'; // Fix missing TZ, all times are GMT
+    const targetDate = new Date(timeString);
+
+    // Verifica se a data é válida
+    if (isNaN(targetDate.getTime())) {
+        throw new Error('Invalid date string provided');
+    }
+
+    const now = new Date();
+    const limit = new Date(now.getTime() - hours * 60 * 60 * 1000);
+    return targetDate < limit;
 }
 function timeSince(date) {
     const now = new Date();
@@ -33,41 +62,13 @@ function timeSince(date) {
         const count = Math.floor(seconds / intervalSeconds);
         if (count >= 1) {
             const rtf = new Intl.RelativeTimeFormat('pt-BR', { numeric: 'auto' });
-            return rtf.format(-count, unit); // Negativo porque � no passado
+            return rtf.format(-count, unit); // Negativo porque é no passado
         }
     }
     return 'agora';
 }
-
-function isOlderThan(timeString, hours) {
-    if (!timeString.endsWith('Z')) timeString = timeString + 'Z'; // Fix missing TZ, all times are GMT
-    const targetDate = new Date(timeString);
-
-    // Verifica se a data � v�lida
-    if (isNaN(targetDate.getTime())) {
-        throw new Error('Invalid date string provided');
-    }
-
-    const now = new Date();
-    const limit = new Date(now.getTime() - hours * 60 * 60 * 1000);
-    return targetDate < limit;
-}
-
-function generateHourlyLabels(start, end) {
-    const labels = [];
-    let current = start;
-    const endDate = end;
-
-    while (current <= endDate) {
-        const label = getDateTimeForTimezone(current, -3);
-        labels.push(label);
-        current.setHours(current.getHours() + 1); // Incrementa 1 hora
-    }
-    return labels;
-}
-
 function getDateTimeForTimezone(current, tz) {
-    // Ajustar o hor�rio para o timezone especificado (tz � em horas)
+    // Ajustar o horário para o timezone especificado (tz é em horas)
     const offsetMs = tz * 60 * 60 * 1000; // Converte horas para milissegundos
     const adjustedTime = new Date(current.getTime() + offsetMs);
 
@@ -85,7 +86,7 @@ function getDateTimeForTimezone(current, tz) {
     return formattedDateTime;
 }
 function getDateTimeForTimezoneHour(currentString, tz) {
-    // Ajustar o hor�rio para o timezone especificado (tz � em horas)
+    // Ajustar o horário para o timezone especificado (tz é em horas)
     const offsetMs = tz * 60 * 60 * 1000; // Converte horas para milissegundos
 
     if (!currentString.endsWith('Z')) currentString = currentString + 'Z';
@@ -93,7 +94,7 @@ function getDateTimeForTimezoneHour(currentString, tz) {
     const current = new Date(currentString);
     const adjustedTime = new Date(current.getTime() + offsetMs);
 
-    // Extrair componentes da data e hora em UTC (j� ajustado)
+    // Extrair componentes da data e hora em UTC (já ajustado)
     const year = adjustedTime.getUTCFullYear();
     const month = String(adjustedTime.getUTCMonth() + 1).padStart(2, '0');
     const day = String(adjustedTime.getUTCDate()).padStart(2, '0');
@@ -106,24 +107,35 @@ function getDateTimeForTimezoneHour(currentString, tz) {
 
     return formattedDateTime;
 }
+function generateHourlyLabels(start, end) {
+    const labels = [];
+    let current = start;
+    const endDate = end;
 
-function adicionaZ(strDataHora) {
-    if (!strDataHora.endsWith('Z')) strDataHora = strDataHora + 'Z';
-    return strDataHora;
+    while (current <= endDate) {
+        const label = getDateTimeForTimezone(current, -3);
+        labels.push(label);
+        current.setHours(current.getHours() + 1); // Incrementa 1 hora
+    }
+    return labels;
 }
 
+/* ============================================================
+   SINAL E BATERIA
+   Traduzem a telemetria da estação para percentual e ícone Bootstrap.
+   ============================================================ */
 function wifiSignalToPercent(signal) {
-    if (signal == null || isNaN(signal)) return '-'; // Retorna '-' para valores inv�lidos
+    if (signal == null || isNaN(signal)) return '-'; // Retorna '-' para valores inválidos
     if (signal === undefined) return '-';
     if (signal === 0) return '-';
 
-    const MIN_SIGNAL = -90; // N�vel m�nimo
-    const MAX_SIGNAL = -50;  // N�vel m�ximo
+    const MIN_SIGNAL = -90; // Nível mínimo
+    const MAX_SIGNAL = -50;  // Nível máximo
 
-    // Garante que o n�vel esteja dentro do intervalo esperado
+    // Garante que o nível esteja dentro do intervalo esperado
     const clampedSignal = Math.min(Math.max(signal, MIN_SIGNAL), MAX_SIGNAL);
 
-    // Converte o n�vel para percentual
+    // Converte o nível para percentual
     const percent = ((clampedSignal - MIN_SIGNAL) / (MAX_SIGNAL - MIN_SIGNAL)) * 100;
     return Math.round(percent) + '%';
 }
@@ -145,18 +157,24 @@ function iconeBateria(perc) {
     return 'bi-battery-full'; // >70
 }
 
+/* ============================================================
+   URL E NAVEGAÇÃO
+   ============================================================ */
 function getQueryParam(name) {
     const queryString = window.location.search;
     const urlParams = new URLSearchParams(queryString);
     return urlParams.get(name);
 }
+function abrirEstacao(estacao) {
+    window.open('/live.html?estacao=' + estacao, '_blank');
+}
 
+/* ============================================================
+   DIVERSOS
+   ============================================================ */
 function nullSlice(value, size, def) {
     if (value === null) return def;
     if (value === undefined) return def;
 
     return value.slice(size);
-}
-function abrirEstacao(estacao) {
-    window.open('/live.html?estacao=' + estacao, '_blank');
 }

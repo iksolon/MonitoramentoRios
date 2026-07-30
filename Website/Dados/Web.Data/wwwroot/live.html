@@ -6,92 +6,139 @@
     <script type="text/javascript" src="helpers.js"></script>
     <script src="chart.js"></script>
 
+    <style>
+        /* ===================== TABELAS ===================== */
+        table {
+            border-collapse: collapse
+        }
+
+        tr:nth-child(even):not(.blockHeader) {
+            background-color: #f2f2f2;
+        }
+
+        h2 {
+            width: 500px;
+        }
+
+        /* ===================== LAYOUT DO TOPO ===================== */
+        /* Painel de leituras e gráfico lado a lado, quebrando em telas estreitas */
+        .painelTopo {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .colunaTabela {
+            width: 550px;
+        }
+
+        .colunaGrafico {
+            max-height: 300px;
+            width: 600px;
+        }
+
+        /* ===================== CÉLULAS ===================== */
+        .blockHeader {
+            font-weight: bold;
+            background-color: lightslategrey;
+            color: white;
+            padding: 5px;
+        }
+
+        .cellHeader {
+            font-weight: bold;
+            width: 200px;
+        }
+
+        .cellValue {
+            width: 140px;
+        }
+
+        .cellCenter {
+            text-align: center;
+        }
+    </style>
+
     <script>
+        /* ===================== CONSTANTES ===================== */
+
+        // Releitura do instantâneo a cada minuto
+        const INTERVALO_ATUALIZACAO_MS = 60000;
+        // Janela dos mínimos/máximos exibidos nas colunas laterais
+        const HORAS_AGREGADO = 24;
+        // Leituras cruas buscadas para calcular a chuva da última hora
+        const LEITURAS_RECENTES = 10;
+
         var chartObject = null;
-        document.addEventListener("DOMContentLoaded", function () {
-            updateContent();
-            carregaAgregado();
-            carregaHistorico();
 
-            // Atualiza link detalhes
-            document.getElementById("irDetalhes").setAttribute("href", "estacao.html?estacao=" + getQueryParam("estacao"));
-        });
-        setInterval(updateContent, 60000);
+        /* ===================== UTILITÁRIOS ===================== */
 
+        function estacaoSelecionada() {
+            return getQueryParam("estacao");
+        }
+
+        function setValue(id, value) {
+            const element = document.getElementById(id);
+            if (element === null || element === undefined) return;
+
+            element.innerHTML = value || '-';
+        }
+
+        function ordenaMaisRecentePrimeiro(data) {
+            return data.slice().sort((a, b) => {
+                if (!a?.dataHoraDadosUTC) return 1; // Coloca `a` no final se `a` for null ou dataHoraDadosUTC estiver ausente
+                if (!b?.dataHoraDadosUTC) return -1; // Coloca `b` no final se `b` for null ou dataHoraDadosUTC estiver ausente
+
+                return new Date(adicionaZ(b.dataHoraDadosUTC)) - new Date(adicionaZ(a.dataHoraDadosUTC));
+            });
+        }
+
+        /* ===================== CARGA DE DADOS ===================== */
+
+        // Mínimas e máximas das últimas 24 h
         function carregaAgregado() {
-            fetch('/estacoes/agregado?hour=24&estacao=' + getQueryParam("estacao"))
+            fetch(`/estacoes/agregado?hour=${HORAS_AGREGADO}&estacao=` + estacaoSelecionada())
+                .then(response => response.json())
+                .then(renderAgregado)
+                .catch(error => {
+                    console.error('Erro ao carregar dados das estações:', error);
+                });
+        }
+
+        // Leitura mais recente da estação
+        function carregaLeituraAtual() {
+            fetch(`/estacoes/dados?limit=${LEITURAS_RECENTES}&estacao=` + estacaoSelecionada())
+                .then(response => response.json())
+                .then(renderLeituraAtual)
+                .catch(error => {
+                    console.error('Erro ao carregar dados das estações:', error);
+                });
+        }
+
+        // Série horária do intervalo escolhido no combo: alimenta tabela e gráfico
+        function carregaHistorico() {
+            const cboHoras = document.getElementById("cboIntervaloHoras");
+            const tableBody = document.querySelector('#dadosEstacao tbody');
+            const chart = document.getElementById('nivelRioChart');
+
+            tableBody.innerHTML = "";
+            chart.innerHTML = "";
+            if (chartObject != null) chartObject.destroy();
+
+            fetch('/estacoes/lastHourly?lastHours=' + cboHoras.value + '&estacao=' + estacaoSelecionada())
                 .then(response => response.json())
                 .then(data => {
-                    data = data;
-                    // Dados Estação
-                    setValue('clMinBat', `${formatValue(data.tensaoBateria_MIN, 2)}v (${formatValue(data.percentBateria_MIN, 0)}%)`);
-                    setValue('clMinIntTemp', `${formatValue(data.temperaturaInterna_MIN, 1)}ºC`);
-                    setValue('clMinSigStr', `${wifiSignalToPercent(data.forcaSinal_MIN)} (${data.forcaSinal_MIN || '-'}dBm)`);
-                    // Ar
-                    setValue('clMinTemp', `${formatValue(data.temperaturaAr_MIN, 1)}ºC`);
-                    setValue('clMinHumd', `${formatValue(data.umidadeAr_MIN, 1)}%`);
-                    setValue('clMinPres', `${formatValue(data.pressaoAr_MIN, 1)}hPa`);
-                    // Medição
-                    setValue('clMinLevel', `${formatValue(data.nivelRio_MIN, 3) || '-'}m`);
-                    setValue('clMinRain', `${formatValue(data.precipitacaoTotal_MIN, 1) || '-'}mm/h`);
-
-                    // Dados Estação
-                    setValue('clMaxBat', `${formatValue(data.tensaoBateria_MAX, 2)}v (${formatValue(data.percentBateria_MAX, 0)}%)`);
-                    setValue('clMaxIntTemp', `${formatValue(data.temperaturaInterna_MAX, 1)}ºC`);
-                    setValue('clMaxSigStr', `${wifiSignalToPercent(data.forcaSinal_MAX)} (${data.forcaSinal_MAX || '-'}dBm)`);
-                    // Ar
-                    setValue('clMaxTemp', `${formatValue(data.temperaturaAr_MAX, 1)}ºC`);
-                    setValue('clMaxHumd', `${formatValue(data.umidadeAr_MAX, 1)}%`);
-                    setValue('clMaxPres', `${formatValue(data.pressaoAr_MAX, 1)}hPa`);
-                    // Medição
-                    setValue('clMaxLevel', `${formatValue(data.nivelRio_MAX, 3) || '-'}m`);
-                    setValue('clMaxRain', `${formatValue(data.precipitacaoTotal_MAX, 1) || '-'}mm/h`);
-
-                    setValue('clRain24h', `${formatValue(data.precipitacaoTotal_Hora, 1) || '-'}mm/h`);
+                    renderTabelaHistorico(tableBody, ordenaMaisRecentePrimeiro(data));
+                    desenhaGraficoHistorico(chart, montaSerieHistorico(data));
                 })
                 .catch(error => {
                     console.error('Erro ao carregar dados das estações:', error);
                 });
         }
-        function updateContent() {
-            fetch('/estacoes/dados?limit=10&estacao=' + getQueryParam("estacao"))
-                .then(response => response.json())
-                .then(data => {
-                    const dado = data[0]; // Mais recente
-                    const dtD0 = new Date(adicionaZ(dado.dataHoraDadosUTC));
-                    // Header
-                    setValue('nomeEstacao', dado.nomeEstacao);
-                    setValue('dtDados', dtD0.toLocaleString("pt-BR"));
-                    // Dados Estação
-                    setValue('clNomeEstacao', dado.nomeEstacao);
-                    setValue('clBat', `${formatValue(dado.tensaoBateria, 2)}v (${formatValue(dado.percentBateria, 0)}%)`);
-                    setValue('clIntTemp', `${formatValue(dado.temperaturaInterna, 1)}ºC`);
-                    setValue('clSigStr', `${wifiSignalToPercent(dado.forcaSinal)} (${dado.forcaSinal || '-'}dBm)`);
-                    // Ar
-                    setValue('clTemp', `${formatValue(dado.temperaturaAr, 1)}ºC`);
-                    setValue('clHumd', `${formatValue(dado.umidadeAr, 1)}%`);
-                    setValue('clPres', `${formatValue(dado.pressaoAr, 1)}hPa`);
-                    // Medição
-                    setValue('clLevel', `${formatValue(dado.nivelRio, 3) || '-'}m`);
 
-                    let sign = '';
-                    if (dado.precipitacao10min) {
-                        if (!dado.precipitacao) dado.precipitacao = 0;
-                        let diff = Math.abs(dado.precipitacao - dado.precipitacao10min);
-                        // >1mm
-                        if (diff > 1) sign = dado.precipitacao > dado.precipitacao10min ? "&uarr;" : "&darr;";
-                        if (diff > 10) sign = dado.precipitacao > dado.precipitacao10min ? "&uarr;&uarr;" : "&darr;&darr;";
-                    }
-                    setValue('clRain', `${formatValue(dado.precipitacao, 1) || '-'}mm/min ${sign}`);
+        /* ===================== CÁLCULO ===================== */
 
-                    const diff = calcularPrecipitacaoComReset(data);
-                    setValue('clRain1h', `${formatValue(diff, 1) || '-'}mm/h`);
-
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar dados das estações:', error);
-                });
-        }
+        // O pluviômetro reporta acumulado que zera de tempo em tempo; somar as
+        // diferenças consecutivas e tratar o reset dá a chuva da última hora.
         function calcularPrecipitacaoComReset(data) {
             if (!data || data.length === 0) return 0;
 
@@ -126,169 +173,213 @@
 
             return total;
         }
-        function setValue(id, value) {
-            const element = document.getElementById(id);
-            if (element === null || element === undefined) return;
 
-            element.innerHTML = value || '-';
+        // Seta de tendência: compara a taxa atual com a de 10 min atrás
+        function sinalTendenciaChuva(dado) {
+            if (!dado.precipitacao10min) return '';
+            if (!dado.precipitacao) dado.precipitacao = 0;
+
+            const diff = Math.abs(dado.precipitacao - dado.precipitacao10min);
+            const subindo = dado.precipitacao > dado.precipitacao10min;
+
+            if (diff > 10) return subindo ? "&uarr;&uarr;" : "&darr;&darr;";
+            if (diff > 1) return subindo ? "&uarr;" : "&darr;"; // >1mm
+            return '';
         }
 
-        function carregaHistorico() {
-            const loraIcon = "<img src='lora.svg' style='height:24px;margin-left:4px;vertical-align: middle;'>";
-            var cboHoras = document.getElementById("cboIntervaloHoras");
-            const tableBody = document.querySelector('#dadosEstacao tbody');
+        // Estação com régua mostra nível; estação só de pluviômetro mostra chuva.
+        function montaSerieHistorico(data) {
+            let chuva = false;
+            let rio = false;
+            data.forEach(dado => {
+                if (!dado) return;
+                if (dado.precipitacaoTotal_Hora || dado.precipitacaoTotal_Hora == 0) chuva = true;
+                if (dado.nivelRio_AVG || dado.nivelRio_AVG == 0) rio = true;
+            })
+
+            if (rio && chuva) {
+                chuva = false; // Prioriza Rio
+            }
+
+            const labels = []; // Para os rótulos do gráfico
+            const valores = []; // Para os valores do nível do rio
+
+            data.forEach(dado => {
+                if (dado === undefined || dado === null) return;
+
+                const label = getDateTimeForTimezoneHour(dado.dataHoraDadosUTC, -3);
+                //const label = dado.dataHoraDadosUTC.slice(8, 10) + '/' + dado.dataHoraDadosUTC.slice(5, 7) + ' ' + dado.dataHoraDadosUTC.slice(11, 13) + 'h';
+
+                if (dado.nivelRio_AVG && dado.nivelRio_AVG < 0) dado.nivelRio_AVG = 0;
+
+                labels.push(label);
+                if (chuva) valores.push(formatValue(dado.precipitacaoTotal_Hora, 1) || null); // Adicionar null se não houver dados
+                else valores.push(formatValue(dado.nivelRio_AVG, 2) || null); // Adicionar null se não houver dados
+            });
+
+            return { labels, valores, chuva };
+        }
+
+        /* ===================== RENDER ===================== */
+
+        function renderAgregado(data) {
+            renderColunaMinimas(data);
+            renderColunaMaximas(data);
+
+            setValue('clRain24h', `${formatValue(data.precipitacaoTotal_Hora, 1) || '-'}mm/h`);
+        }
+
+        function renderColunaMinimas(data) {
+            // Dados Estação
+            setValue('clMinBat', `${formatValue(data.tensaoBateria_MIN, 2)}v (${formatValue(data.percentBateria_MIN, 0)}%)`);
+            setValue('clMinIntTemp', `${formatValue(data.temperaturaInterna_MIN, 1)}ºC`);
+            setValue('clMinSigStr', `${wifiSignalToPercent(data.forcaSinal_MIN)} (${data.forcaSinal_MIN || '-'}dBm)`);
+            // Ar
+            setValue('clMinTemp', `${formatValue(data.temperaturaAr_MIN, 1)}ºC`);
+            setValue('clMinHumd', `${formatValue(data.umidadeAr_MIN, 1)}%`);
+            setValue('clMinPres', `${formatValue(data.pressaoAr_MIN, 1)}hPa`);
+            // Medição
+            setValue('clMinLevel', `${formatValue(data.nivelRio_MIN, 3) || '-'}m`);
+            setValue('clMinRain', `${formatValue(data.precipitacaoTotal_MIN, 1) || '-'}mm/h`);
+        }
+
+        function renderColunaMaximas(data) {
+            // Dados Estação
+            setValue('clMaxBat', `${formatValue(data.tensaoBateria_MAX, 2)}v (${formatValue(data.percentBateria_MAX, 0)}%)`);
+            setValue('clMaxIntTemp', `${formatValue(data.temperaturaInterna_MAX, 1)}ºC`);
+            setValue('clMaxSigStr', `${wifiSignalToPercent(data.forcaSinal_MAX)} (${data.forcaSinal_MAX || '-'}dBm)`);
+            // Ar
+            setValue('clMaxTemp', `${formatValue(data.temperaturaAr_MAX, 1)}ºC`);
+            setValue('clMaxHumd', `${formatValue(data.umidadeAr_MAX, 1)}%`);
+            setValue('clMaxPres', `${formatValue(data.pressaoAr_MAX, 1)}hPa`);
+            // Medição
+            setValue('clMaxLevel', `${formatValue(data.nivelRio_MAX, 3) || '-'}m`);
+            setValue('clMaxRain', `${formatValue(data.precipitacaoTotal_MAX, 1) || '-'}mm/h`);
+        }
+
+        function renderLeituraAtual(data) {
+            const dado = data[0]; // Mais recente
+            const dtD0 = new Date(adicionaZ(dado.dataHoraDadosUTC));
+            // Header
+            setValue('nomeEstacao', dado.nomeEstacao);
+            setValue('dtDados', dtD0.toLocaleString("pt-BR"));
+            // Dados Estação
+            setValue('clNomeEstacao', dado.nomeEstacao);
+            setValue('clBat', `${formatValue(dado.tensaoBateria, 2)}v (${formatValue(dado.percentBateria, 0)}%)`);
+            setValue('clIntTemp', `${formatValue(dado.temperaturaInterna, 1)}ºC`);
+            setValue('clSigStr', `${wifiSignalToPercent(dado.forcaSinal)} (${dado.forcaSinal || '-'}dBm)`);
+            // Ar
+            setValue('clTemp', `${formatValue(dado.temperaturaAr, 1)}ºC`);
+            setValue('clHumd', `${formatValue(dado.umidadeAr, 1)}%`);
+            setValue('clPres', `${formatValue(dado.pressaoAr, 1)}hPa`);
+            // Medição
+            setValue('clLevel', `${formatValue(dado.nivelRio, 3) || '-'}m`);
+            setValue('clRain', `${formatValue(dado.precipitacao, 1) || '-'}mm/min ${sinalTendenciaChuva(dado)}`);
+            setValue('clRain1h', `${formatValue(calcularPrecipitacaoComReset(data), 1) || '-'}mm/h`);
+        }
+
+        function renderTabelaHistorico(tableBody, sortedData) {
             tableBody.innerHTML = "";
+            sortedData.forEach(dado => {
+                if (dado === undefined || dado === null) return;
+                tableBody.appendChild(montaLinhaHistorico(dado));
+            });
+        }
 
-            const chart = document.getElementById('nivelRioChart');
+        function montaLinhaHistorico(dado) {
+            //let precRate = dado.precipitacao_MAX ? `${formatValue(dado.precipitacao_MAX, 1) || '-'}mm/min` : '';
+            const precTotalH = dado.precipitacaoTotal_Hora || dado.precipitacaoTotal_Hora == 0 ? `${formatValue(dado.precipitacaoTotal_Hora, 1) || '-'}mm/h` : '';
+            const localDateString = getDateTimeForTimezoneHour(dado.dataHoraDadosUTC, -3);
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${localDateString}</td>
+                <td class="cellCenter">${dado.dataCount}</td>
+                <td>${formatValue(dado.temperaturaInterna_AVG, 1)}ºC</td>
+                <td>${formatValue(dado.tensaoBateria_AVG, 2)}v (${formatValue(dado.percentBateria_AVG, 0)}%)</td>
+                <td>${formatValue(dado.temperaturaAr_AVG, 1) || '-'}ºC</td>
+                <td>${formatValue(dado.umidadeAr_AVG, 1) || '-'}%</td>
+                <td>${formatValue(dado.pressaoAr_AVG, 1) || '-'}hPa</td>
+                <td>${formatValue(dado.nivelRio_AVG, 2) || '-'}m</td>
+                <td>${precTotalH}</td>
+                <td>${wifiSignalToPercent(dado.forcaSinal_AVG)} (${formatValue(dado.forcaSinal_AVG, 0) || '-'}dBm)</td>
+                `;
+            return row;
+        }
+
+        function desenhaGraficoHistorico(chart, serie) {
+            const rotuloSerie = serie.chuva ? 'Chuva (mm/h)' : 'Nível do Rio (m)';
+
             chart.innerHTML = "";
-            if (chartObject != null) chartObject.destroy();
+            const ctx = chart.getContext('2d');
+            chartObject = new Chart(ctx, {
+                type: serie.chuva ? 'bar' : 'line',
+                data: {
+                    labels: serie.labels, // Usar os rótulos preparados
+                    datasets: [datasetGraficoHistorico(rotuloSerie, serie.valores)]
+                },
+                options: opcoesGraficoHistorico(rotuloSerie)
+            });
+        }
 
-            fetch('/estacoes/lastHourly?lastHours=' + cboHoras.value + '&estacao=' + getQueryParam("estacao"))
-                .then(response => response.json())
-                .then(data => {
-                    const sortedData = data.slice().sort((a, b) => {
-                        if (!a?.dataHoraDadosUTC) return 1; // Coloca `a` no final se `a` for null ou dataHoraDadosUTC estiver ausente
-                        if (!b?.dataHoraDadosUTC) return -1; // Coloca `b` no final se `b` for null ou dataHoraDadosUTC estiver ausente
+        function datasetGraficoHistorico(rotulo, valores) {
+            return {
+                label: rotulo,
+                data: valores, // Usar os dados preparados
+                borderColor: 'rgba(75, 192, 192, 1)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderWidth: 2,
+                pointRadius: 3,
+                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
+                pointBorderColor: '#fff'
+            };
+        }
 
-                        return new Date(adicionaZ(b.dataHoraDadosUTC)) - new Date(adicionaZ(a.dataHoraDadosUTC));
-                    });
-
-                    tableBody.innerHTML = "";
-                    sortedData.forEach(dado => {
-                        if (dado === undefined || dado === null) return;
-                        // Tabela
-                        //let precRate = dado.precipitacao_MAX ? `${formatValue(dado.precipitacao_MAX, 1) || '-'}mm/min` : '';
-                        let precTotalH = dado.precipitacaoTotal_Hora || dado.precipitacaoTotal_Hora == 0 ? `${formatValue(dado.precipitacaoTotal_Hora, 1) || '-'}mm/h` : '';
-
-                        const localDateString = getDateTimeForTimezoneHour(dado.dataHoraDadosUTC, -3);
-                        const row = document.createElement('tr');
-                        row.innerHTML = `
-                                <td>${localDateString}</td>
-                                <td style="text-align: center;">${dado.dataCount}</td>
-                                <td>${formatValue(dado.temperaturaInterna_AVG, 1)}ºC</td>
-                                <td>${formatValue(dado.tensaoBateria_AVG, 2)}v (${formatValue(dado.percentBateria_AVG, 0)}%)</td>
-                                <td>${formatValue(dado.temperaturaAr_AVG, 1) || '-'}ºC</td>
-                                <td>${formatValue(dado.umidadeAr_AVG, 1) || '-'}%</td>
-                                <td>${formatValue(dado.pressaoAr_AVG, 1) || '-'}hPa</td>
-                                <td>${formatValue(dado.nivelRio_AVG, 2) || '-'}m</td>
-                                <td>${precTotalH}</td>
-                                <td>${wifiSignalToPercent(dado.forcaSinal_AVG)} (${formatValue(dado.forcaSinal_AVG, 0) || '-'}dBm)</td>
-                                `;
-                        tableBody.appendChild(row);
-                    });
-
-                    // Criar o gráfico
-                    const labels = []; // Para os rótulos do gráfico
-                    const nivelRioData = []; // Para os valores do nível do rio
-
-                    let chuva = false;
-                    let rio = false;
-                    data.forEach(dado => {
-                        if (!dado) return;
-                        if (dado.precipitacaoTotal_Hora || dado.precipitacaoTotal_Hora == 0) chuva = true;
-                        if (dado.nivelRio_AVG || dado.nivelRio_AVG == 0) rio = true;
-                    })
-
-                    if (rio && chuva) {
-                        chuva = false; // Prioriza Rio
+        function opcoesGraficoHistorico(rotuloEixoY) {
+            return {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
                     }
-
-                    data.forEach(dado => {
-                        if (dado === undefined || dado === null) return;
-
-                        const label = getDateTimeForTimezoneHour(dado.dataHoraDadosUTC, -3);
-                        //const label = dado.dataHoraDadosUTC.slice(8, 10) + '/' + dado.dataHoraDadosUTC.slice(5, 7) + ' ' + dado.dataHoraDadosUTC.slice(11, 13) + 'h';
-
-                        if (dado.nivelRio_AVG && dado.nivelRio_AVG < 0) dado.nivelRio_AVG = 0;
-
-                        labels.push(label);
-                        if (chuva) nivelRioData.push(formatValue(dado.precipitacaoTotal_Hora, 1) || null); // Adicionar null se não houver dados
-                        else nivelRioData.push(formatValue(dado.nivelRio_AVG, 2) || null); // Adicionar null se não houver dados
-                    });
-
-                    chart.innerHTML = "";
-                    const ctx = chart.getContext('2d');
-                    chartObject = new Chart(ctx, {
-                        type: chuva ? 'bar' : 'line',
-                        data: {
-                            labels: labels, // Usar os rótulos preparados
-                            datasets: [{
-                                label: chuva ? 'Chuva (mm/h)' : 'Nível do Rio (m)',
-                                data: nivelRioData, // Usar os dados preparados
-                                borderColor: 'rgba(75, 192, 192, 1)',
-                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                                borderWidth: 2,
-                                pointRadius: 3,
-                                pointBackgroundColor: 'rgba(75, 192, 192, 1)',
-                                pointBorderColor: '#fff'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'top'
-                                },
-                                tooltip: {
-                                    mode: 'index',
-                                    intersect: false
-                                }
-                            },
-                            scales: {
-                                x: {
-                                    title: {
-                                        display: true,
-                                        text: 'Hora'
-                                    }
-                                },
-                                y: {
-                                    title: {
-                                        display: true,
-                                        text: chuva ? 'Chuva (mm/h)' : 'Nível do Rio (m)',
-                                    },
-                                    beginAtZero: true
-                                }
-                            }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Hora'
                         }
-                    });
-
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar dados das estações:', error);
-                });
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: rotuloEixoY
+                        },
+                        beginAtZero: true
+                    }
+                }
+            };
         }
 
+        /* ===================== EVENTOS / INIT ===================== */
+
+        document.addEventListener("DOMContentLoaded", function () {
+            carregaLeituraAtual();
+            carregaAgregado();
+            carregaHistorico();
+
+            // Atualiza link detalhes
+            document.getElementById("irDetalhes").setAttribute("href", "estacao.html?estacao=" + estacaoSelecionada());
+
+            document.getElementById("cboIntervaloHoras").addEventListener("change", carregaHistorico);
+        });
+        setInterval(carregaLeituraAtual, INTERVALO_ATUALIZACAO_MS);
     </script>
-    <style>
-        table {
-            border-collapse: collapse
-        }
-
-        tr:nth-child(even):not(.blockHeader) {
-            background-color: #f2f2f2;
-        }
-
-        h2 {
-            width: 500px;
-        }
-
-        .blockHeader {
-            font-weight: bold;
-            background-color: lightslategrey;
-            color: white;
-            padding: 5px;
-        }
-
-        .cellHeader {
-            font-weight: bold;
-            width: 200px;
-        }
-
-        .cellValue {
-            width: 140px;
-        }
-    </style>
 </head>
 <body>
     <a href="/">Voltar à Home</a>
@@ -297,8 +388,9 @@
 
     <h2>Dados da Estação <span id="nomeEstacao">[NOME ESTACAO]</span></h2>
 
-    <div id="topo" style="display: flex; flex-wrap: wrap;">
-        <div id="dvTable" style="width: 550px;">
+    <div id="topo" class="painelTopo">
+
+        <div id="dvTable" class="colunaTabela">
             <table>
                 <tbody>
                     <tr class="blockHeader">
@@ -387,7 +479,7 @@
 
             <div>Atualizado em <span id="dtDados">[HH]</span></div>
         </div>
-        <div id="dvGrafico" style="max-height: 300px; width: 600px">
+        <div id="dvGrafico" class="colunaGrafico">
             <canvas id="nivelRioChart"></canvas>
         </div>
     </div>
@@ -395,7 +487,7 @@
     <br /> <hr /> <br />
     <div>
         <span>Intervalo:</span>
-        <select onchange="carregaHistorico()" id="cboIntervaloHoras">
+        <select id="cboIntervaloHoras">
             <option value="24" selected>24 horas</option>
             <option value="36">36 horas</option>
             <option value="48">48 horas</option>

@@ -4,7 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Processador de Transação</title>
+
+    <!-- ============================================================
+         APARÊNCIA
+         ============================================================ -->
     <style>
+        /* --- Página --- */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -12,6 +17,7 @@
             padding: 20px;
         }
 
+        /* --- Formulário --- */
         textarea, button {
             display: block;
             width: 100%;
@@ -34,6 +40,7 @@
                 background-color: #45a049;
             }
 
+        /* --- Resultado --- */
         #output {
             margin-top: 20px;
         }
@@ -45,75 +52,37 @@
             border-radius: 7px;
             padding: 3px;
         }
+
+        .mensagem-erro {
+            color: red;
+        }
     </style>
 </head>
 <body>
+
+    <!-- ============================================================
+         ESTRUTURA
+         ============================================================ -->
     <h2>Preparador de Transação para Transmissão LoRa</h2>
     <textarea id="inputTx" placeholder="Insira o HEX da transação assinada"></textarea>
-    <button onclick="processTransaction()">Processar</button>
+    <button id="btnProcessar">Processar</button>
     <div id="output">...</div>
     <div>Envie cada uma das mensagens acima, uma por vez na rede LoRa. Aguarde a confirmação de recebimento</div>
 
+    <!-- ============================================================
+         COMPORTAMENTO
+         ============================================================ -->
     <script>
-        function processTransaction() {
-            const input = document.getElementById('inputTx').value.trim();
-            const outputDiv = document.getElementById('output');
-            outputDiv.innerHTML = '';
+        /* ============================================================
+           CONSTANTES
+           ============================================================ */
+        const TAMANHO_ALVO_BASE64 = 200;  // Tamanho alvo em base64
+        const HEX_POR_BASE64 = 3 / 4;     // 3 bytes HEX geram 4 caracteres base64
+        const MAX_PARTES = 9;             // o cabeçalho BTX tem 1 dígito só para a parte
 
-            if (!input) {
-                outputDiv.innerHTML = '<p style="color: red;">Por favor, insira uma transação válida.</p>';
-                return;
-            }
-
-            // Calcular o número de chunks e o tamanho de cada chunk
-            const targetBase64Size = 200; // Tamanho alvo em base64
-            const hexPerBase64 = 3 / 4; // 3 bytes HEX geram 4 caracteres base64
-            const maxHexChunkSize = Math.floor(targetBase64Size * hexPerBase64 * 2); // ~300 caracteres HEX
-
-            // Calcular o número de chunks para tamanhos aproximadamente iguais
-            const totalHexLength = input.length;
-            const numChunks = Math.max(1, Math.ceil(totalHexLength / maxHexChunkSize));
-
-            // Validar se o número de chunks excede 9
-            if (numChunks > 9) {
-                outputDiv.innerHTML = '<p style="color: red;">Erro: A transação resulta em mais de 9 partes. Reduza o tamanho da transação.</p>';
-                return;
-            }
-
-            let hexChunkSize = Math.ceil(totalHexLength / numChunks);
-            if (hexChunkSize % 2 === 1) {
-                hexChunkSize += 1;
-            }
-
-            console.log(`CHUNKS: totalHexLength: ${totalHexLength}, numChunks: ${numChunks}, hexChunkSize: ${hexChunkSize}`);
-
-            // Dividir o HEX em chunks
-            const chunks = [];
-            for (let i = 0; i < totalHexLength; i += hexChunkSize) {
-                chunks.push(input.slice(i, i + hexChunkSize));
-            }
-
-            // Codificar cada chunk em base64 individualmente
-            chunks.forEach((chunk, index) => {
-                try {
-                    // Converter HEX para string de bytes
-                    const byteString = hexToByteString(chunk);
-                    // Codificar em base64
-                    const base64 = btoa(byteString);
-                    const chunkDiv = document.createElement('div');
-                    chunkDiv.className = 'chunk';
-                    // Formato BTXxy, onde x é a parte atual (index+1) e y é o total (numChunks)
-                    chunkDiv.textContent = `BTX${index + 1}${numChunks}${base64}`;
-                    outputDiv.appendChild(chunkDiv);
-
-                    console.log(`CHUNK: ${index + 1}/${numChunks} Len: ${chunk.length} Data: ${chunk}`);
-
-                } catch (e) {
-                    outputDiv.innerHTML += `<p style="color: red;">Erro ao processar chunk ${index + 1}: ${e.message}</p>`;
-                }
-            });
-        }
-
+        /* ============================================================
+           UTILITÁRIOS
+           ============================================================ */
         // Função para converter HEX para string de bytes
         function hexToByteString(hex) {
             if (hex.length % 2 !== 0) {
@@ -129,6 +98,90 @@
             }
             return byteString;
         }
+
+        function tamanhoMaximoChunkHex() {
+            return Math.floor(TAMANHO_ALVO_BASE64 * HEX_POR_BASE64 * 2); // ~300 caracteres HEX
+        }
+
+        /* ============================================================
+           CÁLCULO
+           ============================================================ */
+        // Divide o HEX em partes de tamanho aproximadamente igual.
+        // Devolve null quando a transação não cabe em MAX_PARTES mensagens.
+        function dividirHex(input) {
+            const totalHexLength = input.length;
+            const numChunks = Math.max(1, Math.ceil(totalHexLength / tamanhoMaximoChunkHex()));
+
+            if (numChunks > MAX_PARTES) return null;
+
+            let hexChunkSize = Math.ceil(totalHexLength / numChunks);
+            if (hexChunkSize % 2 === 1) {
+                hexChunkSize += 1; // par, para nunca cortar um byte no meio
+            }
+
+            console.log(`CHUNKS: totalHexLength: ${totalHexLength}, numChunks: ${numChunks}, hexChunkSize: ${hexChunkSize}`);
+
+            const chunks = [];
+            for (let i = 0; i < totalHexLength; i += hexChunkSize) {
+                chunks.push(input.slice(i, i + hexChunkSize));
+            }
+            return { chunks, numChunks };
+        }
+
+        /* ============================================================
+           RENDER
+           ============================================================ */
+        function mostraErro(outputDiv, mensagem) {
+            outputDiv.innerHTML = `<p class="mensagem-erro">${mensagem}</p>`;
+        }
+
+        function acrescentaErro(outputDiv, mensagem) {
+            outputDiv.innerHTML += `<p class="mensagem-erro">${mensagem}</p>`;
+        }
+
+        function renderChunk(outputDiv, chunk, index, numChunks) {
+            try {
+                // Converter HEX para string de bytes
+                const byteString = hexToByteString(chunk);
+                // Codificar em base64
+                const base64 = btoa(byteString);
+                const chunkDiv = document.createElement('div');
+                chunkDiv.className = 'chunk';
+                // Formato BTXxy, onde x é a parte atual (index+1) e y é o total (numChunks)
+                chunkDiv.textContent = `BTX${index + 1}${numChunks}${base64}`;
+                outputDiv.appendChild(chunkDiv);
+
+                console.log(`CHUNK: ${index + 1}/${numChunks} Len: ${chunk.length} Data: ${chunk}`);
+
+            } catch (e) {
+                acrescentaErro(outputDiv, `Erro ao processar chunk ${index + 1}: ${e.message}`);
+            }
+        }
+
+        function processTransaction() {
+            const input = document.getElementById('inputTx').value.trim();
+            const outputDiv = document.getElementById('output');
+            outputDiv.innerHTML = '';
+
+            if (!input) {
+                mostraErro(outputDiv, 'Por favor, insira uma transação válida.');
+                return;
+            }
+
+            const divisao = dividirHex(input);
+            if (divisao === null) {
+                mostraErro(outputDiv, `Erro: A transação resulta em mais de ${MAX_PARTES} partes. Reduza o tamanho da transação.`);
+                return;
+            }
+
+            // Codificar cada chunk em base64 individualmente
+            divisao.chunks.forEach((chunk, index) => renderChunk(outputDiv, chunk, index, divisao.numChunks));
+        }
+
+        /* ============================================================
+           EVENTOS / INIT
+           ============================================================ */
+        document.getElementById('btnProcessar').addEventListener('click', processTransaction);
     </script>
 </body>
 </html>

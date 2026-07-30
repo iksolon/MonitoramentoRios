@@ -6,6 +6,7 @@
     <meta http-equiv="refresh" content="60">
     <title>Dados da Estação</title>
     <style>
+        /* ===================== TABELAS ===================== */
         table {
             border-collapse: collapse;
             margin-top: 20px;
@@ -20,6 +21,14 @@
 
         th {
             background-color: #f2f2f2;
+        }
+
+        /* ===================== ÍCONES ===================== */
+        /* Marca a leitura que chegou por LoRa, ao lado da data */
+        .iconeLora {
+            height: 24px;
+            margin-left: 4px;
+            vertical-align: middle;
         }
     </style>
     <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -58,113 +67,171 @@
     <p>Veja mais em: <a href="https://github.com/RafaelEstevamReis/MonitoramentoRios" target="_blank">gh/MonitoramentoRios</a></p>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const loraIcon = "<img src='lora.svg' style='height:24px;margin-left:4px;vertical-align: middle;'>";
-            let temNivel = false;
-            let temChuva = false;
-            let temTemp = false;
-            let temPress = false;
-            let temBat = false;
-            // Carregar gráfico após carregar os dados
-            fetch('/estacoes/dados?limit=300&estacao=' + getQueryParam("estacao"))
+        /* ===================== CONSTANTES ===================== */
+
+        // Quantas leituras cruas a página desenha
+        const LIMITE_LEITURAS = 300;
+        // source == 3 significa que o dado chegou por LoRa, não por Wi-Fi
+        const SOURCE_LORA = 3;
+        const ICONE_LORA = "<img src='lora.svg' class='iconeLora'>";
+
+        /* ===================== UTILITÁRIOS ===================== */
+
+        function estacaoSelecionada() {
+            return getQueryParam("estacao");
+        }
+
+        // A API devolve do mais novo para o mais velho; o gráfico lê ao contrário.
+        // A primeira linha é o cabeçalho da série e fica onde está.
+        function inverteMantendoCabecalho(serie) {
+            return [serie[0]].concat(serie.slice(1).reverse());
+        }
+
+        /* ===================== CARGA DE DADOS ===================== */
+
+        // Carregar gráfico após carregar os dados
+        function carregaDadosEstacao() {
+            fetch(`/estacoes/dados?limit=${LIMITE_LEITURAS}&estacao=` + estacaoSelecionada())
                 //fetch('https://monitorarios.xyz/estacoes/dados?estacao=' + getQueryParam("estacao"), { mode: 'no-cors' })
                 .then(response => response.json())
-                .then(data => {
-                    const tableBody = document.querySelector('#dadosEstacao tbody');
-                    tableBody.innerHTML = "";
-                    const chartData = [
-                        //['Data/Hora', 'Temperatura do Ar', 'Umidade do Ar']
-                        [
-                            { label: 'Data/Hora', type: 'string' },
-                            { label: 'Temperatura do Ar', type: 'number' },
-                            { label: 'Umidade do Ar', type: 'number' },
-                        ]
-                    ];
-                    const chartLevelData = [['Data/Hora', 'Nível', 'Sensor Raw']];
-                    const chartRainData = [['Data/Hora', 'Chuva']];
-                    const chartPressData = [['Data/Hora', 'Pressão']];
-                    const chartBatData = [['Data/Hora', 'v Bat', '% Bat']];
-
-                    const spnNome = document.getElementById('nomeEstacao');
-                    spnNome.textContent = data[0].nomeEstacao;
-                    let precAnterior = null;
-
-                    data.forEach(dado => {
-                        const row = document.createElement('tr');
-
-                        let prec = '-mm/min';
-                        if (dado.precipitacao || dado.precipitacao == 0) prec = `${formatValue(dado.precipitacao, 1) || '-'}mm/min (AT ${formatValue(dado.precipitacaoTotal, 1)})`;
-
-                        row.innerHTML = `
-                                            <td>${new Date(dado.recebidoUTC).toLocaleString()}${dado.source == 3 ? loraIcon : ''}</td>
-                                            <td>${formatValue(dado.temperaturaInterna, 1)}ºC | ${formatValue(dado.tensaoBateria, 2)}v (${formatValue(dado.percentBateria, 0)}%)</td>
-                                            <td>${new Date(dado.dataHoraDadosUTC).toLocaleString()}</td>
-                                            <td>${formatValue(dado.temperaturaAr, 1)}ºC | ${formatValue(dado.umidadeAr, 0)}% | ${formatValue(dado.pressaoAr, 1)}hPa</td>
-                                            <td>${prec} | ${formatValue(dado.nivelRio, 2) || '-'}m</td>
-                                            <td>${wifiSignalToPercent(dado.forcaSinal)} (${dado.forcaSinal || '-'}dBm)</td>
-                                        `;
-                        tableBody.appendChild(row);
-
-                        // Adicionar dados ao gráfico, se existirem valores
-                        const hora = new Date(dado.dataHoraDadosUTC).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-                        if (dado.temperaturaAr || dado.umidadeAr) {
-                            chartData.push([hora, round(dado.temperaturaAr, 1), round(dado.umidadeAr, 0)]);
-                            temTemp = true;
-                        }
-                        if (dado.precipitacao || dado.precipitacao == 0) {
-                            if (!precAnterior) precAnterior = dado.precipitacaoTotal;
-
-                            let diff = precAnterior - dado.precipitacaoTotal;
-                            if (diff < 0) diff = 0; // reset
-
-                            chartRainData.push([hora, round(diff, 2)]);
-
-                            precAnterior = dado.precipitacaoTotal;
-                            temChuva = true;
-                        }
-                        if (dado.nivelRio || dado.nivelRio_RAW) {
-                            chartLevelData.push([hora, round(dado.nivelRio, 2), round(dado.nivelRio_RAW, 2)]);
-                            temNivel = true;
-                        }
-                        if (dado.tensaoBateria && dado.tensaoBateria > 0) { // Quando não tem, fica em 0v
-                            chartBatData.push([hora, round(dado.tensaoBateria, 2), round(dado.percentBateria, 0)]);
-                            temBat = true;
-                        }
-                        if (dado.pressaoAr) {
-                            chartPressData.push([hora, round(dado.pressaoAr, 0)]);
-                            temPress = true;
-                        }
-                    });
-
-                    const reversedData = [chartData[0]].concat(chartData.slice(1).reverse());
-                    const reversedLevelData = [chartLevelData[0]].concat(chartLevelData.slice(1).reverse());
-                    const reversedRainData = [chartRainData[0]].concat(chartRainData.slice(1).reverse());
-                    const reversedBatData = [chartBatData[0]].concat(chartBatData.slice(1).reverse());
-                    const reversedPressData = [chartPressData[0]].concat(chartPressData.slice(1).reverse());
-                    // Desenhar o gráfico
-                    google.charts.load('current', { 'packages': ['corechart'] });
-                    google.charts.setOnLoadCallback(() => {
-                        if (temTemp) drawChart(reversedData);
-                        if (temBat) drawChartDuplo(reversedBatData, 'Bateria', 'chartBat_div', 'Tensão (v)', 'Percentual', true);
-                        if (temPress) drawChartSimples(reversedPressData, 'Pressão (hPa)', 'chartPress_div', false);
-
-                        if (temChuva) {
-                            drawChartSimples(reversedRainData, 'Chuva (mm)', 'chartLevel_div', false);
-                        } else {
-                            if (reversedLevelData.length > 2) {
-                                drawChartDuplo(reversedLevelData, 'Nível', 'chartLevel_div', 'Nível (m)', 'Sensor Raw', false);
-
-                            }
-                        }
-                    });
-
-                    if (!temNivel && !temChuva) document.getElementById("chartLevel_div").hidden = true;
-                })
+                .then(renderEstacao)
                 .catch(error => {
                     console.error('Erro ao carregar dados das estações:', error);
                 });
-        });
+        }
+
+        /* ===================== CÁLCULO ===================== */
+
+        function criaAcumuladorSeries() {
+            return {
+                // Quais gráficos a estação tem dado para desenhar
+                temTemp: false,
+                temChuva: false,
+                temNivel: false,
+                temBat: false,
+                temPress: false,
+                // Acumulado anterior do pluviômetro, para tirar a chuva do intervalo
+                precAnterior: null,
+                temperatura: [
+                    //['Data/Hora', 'Temperatura do Ar', 'Umidade do Ar']
+                    [
+                        { label: 'Data/Hora', type: 'string' },
+                        { label: 'Temperatura do Ar', type: 'number' },
+                        { label: 'Umidade do Ar', type: 'number' },
+                    ]
+                ],
+                nivel: [['Data/Hora', 'Nível', 'Sensor Raw']],
+                chuva: [['Data/Hora', 'Chuva']],
+                pressao: [['Data/Hora', 'Pressão']],
+                bateria: [['Data/Hora', 'v Bat', '% Bat']]
+            };
+        }
+
+        // Adicionar dados ao gráfico, se existirem valores
+        function acumulaLeituraNasSeries(acc, dado) {
+            const hora = new Date(dado.dataHoraDadosUTC).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            if (dado.temperaturaAr || dado.umidadeAr) {
+                acc.temperatura.push([hora, round(dado.temperaturaAr, 1), round(dado.umidadeAr, 0)]);
+                acc.temTemp = true;
+            }
+            if (dado.precipitacao || dado.precipitacao == 0) {
+                if (!acc.precAnterior) acc.precAnterior = dado.precipitacaoTotal;
+
+                let diff = acc.precAnterior - dado.precipitacaoTotal;
+                if (diff < 0) diff = 0; // reset
+
+                acc.chuva.push([hora, round(diff, 2)]);
+
+                acc.precAnterior = dado.precipitacaoTotal;
+                acc.temChuva = true;
+            }
+            if (dado.nivelRio || dado.nivelRio_RAW) {
+                acc.nivel.push([hora, round(dado.nivelRio, 2), round(dado.nivelRio_RAW, 2)]);
+                acc.temNivel = true;
+            }
+            if (dado.tensaoBateria && dado.tensaoBateria > 0) { // Quando não tem, fica em 0v
+                acc.bateria.push([hora, round(dado.tensaoBateria, 2), round(dado.percentBateria, 0)]);
+                acc.temBat = true;
+            }
+            if (dado.pressaoAr) {
+                acc.pressao.push([hora, round(dado.pressaoAr, 0)]);
+                acc.temPress = true;
+            }
+        }
+
+        // Uma passada nas leituras alimenta as cinco séries, já na ordem do gráfico
+        function montaSeries(data) {
+            const acc = criaAcumuladorSeries();
+            data.forEach(dado => acumulaLeituraNasSeries(acc, dado));
+
+            return {
+                temTemp: acc.temTemp,
+                temChuva: acc.temChuva,
+                temNivel: acc.temNivel,
+                temBat: acc.temBat,
+                temPress: acc.temPress,
+                temperatura: inverteMantendoCabecalho(acc.temperatura),
+                nivel: inverteMantendoCabecalho(acc.nivel),
+                chuva: inverteMantendoCabecalho(acc.chuva),
+                pressao: inverteMantendoCabecalho(acc.pressao),
+                bateria: inverteMantendoCabecalho(acc.bateria)
+            };
+        }
+
+        /* ===================== RENDER ===================== */
+
+        function renderEstacao(data) {
+            const tableBody = document.querySelector('#dadosEstacao tbody');
+            tableBody.innerHTML = "";
+
+            document.getElementById('nomeEstacao').textContent = data[0].nomeEstacao;
+
+            renderTabelaLeituras(tableBody, data);
+            desenhaGraficos(montaSeries(data));
+        }
+
+        function renderTabelaLeituras(tableBody, data) {
+            data.forEach(dado => tableBody.appendChild(montaLinhaLeitura(dado)));
+        }
+
+        function montaLinhaLeitura(dado) {
+            let prec = '-mm/min';
+            if (dado.precipitacao || dado.precipitacao == 0) prec = `${formatValue(dado.precipitacao, 1) || '-'}mm/min (AT ${formatValue(dado.precipitacaoTotal, 1)})`;
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${new Date(dado.recebidoUTC).toLocaleString()}${dado.source == SOURCE_LORA ? ICONE_LORA : ''}</td>
+                <td>${formatValue(dado.temperaturaInterna, 1)}ºC | ${formatValue(dado.tensaoBateria, 2)}v (${formatValue(dado.percentBateria, 0)}%)</td>
+                <td>${new Date(dado.dataHoraDadosUTC).toLocaleString()}</td>
+                <td>${formatValue(dado.temperaturaAr, 1)}ºC | ${formatValue(dado.umidadeAr, 0)}% | ${formatValue(dado.pressaoAr, 1)}hPa</td>
+                <td>${prec} | ${formatValue(dado.nivelRio, 2) || '-'}m</td>
+                <td>${wifiSignalToPercent(dado.forcaSinal)} (${dado.forcaSinal || '-'}dBm)</td>
+                `;
+            return row;
+        }
+
+        // Desenhar o gráfico
+        // Estação de pluviômetro usa o espaço do nível para mostrar a chuva
+        function desenhaGraficos(series) {
+            google.charts.load('current', { 'packages': ['corechart'] });
+            google.charts.setOnLoadCallback(() => {
+                if (series.temTemp) drawChart(series.temperatura);
+                if (series.temBat) drawChartDuplo(series.bateria, 'Bateria', 'chartBat_div', 'Tensão (v)', 'Percentual', true);
+                if (series.temPress) drawChartSimples(series.pressao, 'Pressão (hPa)', 'chartPress_div', false);
+
+                if (series.temChuva) {
+                    drawChartSimples(series.chuva, 'Chuva (mm)', 'chartLevel_div', false);
+                } else {
+                    if (series.nivel.length > 2) {
+                        drawChartDuplo(series.nivel, 'Nível', 'chartLevel_div', 'Nível (m)', 'Sensor Raw', false);
+
+                    }
+                }
+            });
+
+            if (!series.temNivel && !series.temChuva) document.getElementById("chartLevel_div").hidden = true;
+        }
 
         function drawChart(chartData) {
             const data = google.visualization.arrayToDataTable(chartData);
@@ -252,6 +319,10 @@
             const chart = graficoLinha ? new google.visualization.LineChart(document.getElementById(id)) : new google.visualization.ColumnChart(document.getElementById(id));
             chart.draw(data, options);
         }
+
+        /* ===================== EVENTOS / INIT ===================== */
+
+        document.addEventListener("DOMContentLoaded", carregaDadosEstacao);
     </script>
 </body>
 </html>
