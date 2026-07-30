@@ -102,9 +102,11 @@ Interpolação linear entre os pontos, igual ao índice "agora".
 ### Índice final
 
 `índice = max(índice_agora, índice_futuro)`, exibido arredondado para
-inteiro. Mantém a lógica `drivenBy` que já existe (`"agora"` vs `"previsto"`)
-para a legenda pequena embaixo do selo ("situação agora" / "motivado pela
-previsão · <data>").
+inteiro, sempre no formato **"X/10"** (nunca só "X" solto) — o "/10" é o que
+deixa a escala autoexplicativa sem precisar de legenda extra. Mantém a
+lógica `drivenBy` que já existe (`"agora"` vs `"previsto"`) para a legenda
+pequena embaixo do selo ("situação agora" / "motivado pela previsão ·
+<data>").
 
 **Uma única fonte de verdade:** o índice é calculado dentro de `cityFlood()`
 (`enchente.js`) e devolvido no objeto `F` (`F.indiceAgora`, `F.indiceFuturo`,
@@ -124,9 +126,13 @@ MESMO motor") e que evitou duas contradições nesta sessão.
   veredito.
 - **Card "Enchente na cidade"** (valor grande do `qk`, hoje
   "improvável/possível/iminente/acontecendo/enchente grande"/"baixando"):
-  passa a mostrar o mesmo índice final. A linha pequena de contexto (`sub`,
+  passa a mostrar o mesmo índice final, no formato "X/10". A pequena anotação
+  ao lado do valor (`u` em `qk(k,v,u,sub,hl)` — hoje "agora", "em 6h",
+  "nas próximas 48h") **continua existindo e com o mesmo texto**: já é
+  contexto de tempo factual, não veredito, e ajuda a entender SE o número é
+  sobre agora ou sobre uma janela futura. A linha pequena de contexto (`sub`,
   ex. "rio acima do limite e chuva acima do que o solo aguenta", "rio ainda
-  acima do limite e descendo, sem chuva há 3 h") continua igual — já é
+  acima do limite e descendo, sem chuva há 3 h") também continua igual — já é
   descrição de fato, não categoria de risco.
 
 ### Continua em texto (fora de escopo desta mudança)
