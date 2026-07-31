@@ -27,23 +27,22 @@ export function renderNetCard(){
    Eram 78 linhas escrevendo em quatro lugares do DOM. Separado em: selo,
    manchete e cards. Nenhuma decide regra — o veredito vem pronto de
    enchente.js; aqui so viram texto. */
-const RISKLBL=["BAIXO","BAIXO","ATENÇÃO","ALTO"];
-const RISKCLS=["baixo","baixo","atencao","alto"];
-
-/* Com enchente em curso o selo para de falar em "risco": risco e o que pode
-   acontecer, e isso ja aconteceu. */
-function textoDoSelo(R){
-  const F=R.flood;
-  if(F&&F.ok&&F.level>=3) return F.sev>=2?"Enchente grande":"Enchente em curso";
-  /* Estado medido, entre a enchente e o normal: o rio ainda esta acima do
-     limite mas descendo, sem chuva. Dizer "Risco atenção" aqui apagava o fato
-     de a agua ainda estar fora da caixa; dizer "Enchente" negava o campo. */
-  if(F&&F.ok&&F.recuo&&F.rf>=1) return "Água baixando";
-  return "Risco "+(R.level===0?"baixo":RISKLBL[R.level].toLowerCase());
-}
+/* Indice de risco 1-10 (ver enchente.js: escalaRisco/ESCALA_*): 5 faixas de cor,
+   ceil(n/2) mapeia 1-2/3-4/5-6/7-8/9-10 pra nivel-1..nivel-5. O numero
+   substitui TODA categoria em palavra ("baixo/atencao/alto", "enchente
+   grande", "agua baixando") — inclusive quando ja e fato confirmado, por
+   pedido do dono do projeto: consistencia visual em vez de dois vocabularios
+   diferentes (fato vs. previsao) competindo no mesmo selo. A frase que diz
+   O QUE esta acontecendo continua na manchete (function manchete(), abaixo),
+   que fica de fato descritiva. */
+function faixaDoIndice(n){ return "nivel-"+Math.min(5, Math.max(1, Math.ceil(n/2))); }
+/* Nota de calibracao: a escala foi aferida com poucos eventos reais (o
+   principal, 29/07/2026) — nao e probabilidade estatistica. O * aponta pro
+   aviso no rodape (.disclaimer), sem duplicar o texto em cada card. */
+const NOTA_ESCALA='<sup class="idx-nota" title="Escala com poucos dados reais para calibração — ver rodapé">*</sup>';
 function renderSelo(R){
-  $("#risk-badge").className="risk-badge "+RISKCLS[R.level];
-  $("#risk-label").textContent=textoDoSelo(R);
+  $("#risk-badge").className="risk-badge "+faixaDoIndice(R.level);
+  $("#risk-label").innerHTML=R.level+"/10"+NOTA_ESCALA;
   $("#risk-when").textContent = (R.drivenBy==="previsto"&&R.futWhen)
     ? ("motivado pela previsão · "+diaCurto(R.futWhen))
     : "situação agora";
@@ -160,26 +159,31 @@ export function renderRisk(){
    em frase era texto a mais dizendo o mesmo. */
 function floodCard(F){
   if(!F.ok) return qk("Enchente na cidade","--","","sem chuva medida ou prevista",false);
-  const grande = F.sev>=2;
-  // valor longo ("enchente grande") sem unidade ao lado, senao quebra a linha
-  const v = grande?"enchente grande":"acontecendo", u = grande?"":"agora";
-  if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",v,u, "rio acima do limite e chuva acima do que o solo aguenta", true);
-  if(F.rio>=3)             return qk("Enchente na cidade",v,u, "rio acima do limite", true);
-  if(F.chuva>=3)           return qk("Enchente na cidade",v,u, "chuva acima do que o solo aguenta", true);
-  /* Recuo com regua ainda acima do limite: sem esta linha o card caia direto em
-     "improvável", que e falso enquanto a agua nao voltou para a caixa. */
+  /* O VALOR vira o mesmo indice 1-10 do selo (F.indice — fonte unica, ver
+     cityFlood() em enchente.js), em vez da palavra-veredito
+     (grande/acontecendo/iminente/possivel/improvavel). O "sub" (linha
+     pequena de explicacao) continua igual — e descricao de fato, nao
+     categoria de risco. O "u" (contexto de tempo: "agora"/"em Xh"/
+     "nas proximas 48h") passou a vir SEMPRE preenchido, inclusive nos tres
+     ramos de enchente confirmada, que antes deixavam "u" vazio quando a
+     magnitude era grande pra a linha nao quebrar com o veredito longo por
+     extenso; o valor curto "N/10" nao tem mais esse problema.
+     `hl` (realce visual do card) passa a acompanhar o proprio indice
+     (>=7, faixas laranja/vermelho) em vez de ligado por branch — antes TODO
+     estado "preditivo" (ate "possivel", o mais fraco) ja vinha com hl=true;
+     agora so realca quando o numero de fato justifica. */
+  const v = F.indice+"/10"+NOTA_ESCALA, hl = F.indice>=7;
+  if(F.rio>=3&&F.chuva>=3) return qk("Enchente na cidade",v,"agora", "rio acima do limite e chuva acima do que o solo aguenta", hl);
+  if(F.rio>=3)             return qk("Enchente na cidade",v,"agora", "rio acima do limite", hl);
+  if(F.chuva>=3)           return qk("Enchente na cidade",v,"agora", "chuva acima do que o solo aguenta", hl);
   if(F.recuo&&F.rf>=1)
-    return qk("Enchente na cidade","baixando","", "rio ainda acima do limite e descendo, sem chuva há 3 h", true);
-  /* "iminente" exige CORROBORACAO: extrapolar a subida da regua sozinha da
-     falso positivo. Em 28/07 09h a BE01 subia 4,5 cm/h a 80 % da cota e a
-     reta batia a cota em 3 h — mas o solo ainda absorvia (razao 0,49) e nao
-     houve alagamento. Só vale com a chuva ja em faixa de atencao. */
+    return qk("Enchente na cidade",v,"", "rio ainda acima do limite e descendo, sem chuva há 3 h", hl);
   if(F.etaRio!=null&&F.etaRio<=6&&F.chuva>=2)
-    return qk("Enchente na cidade","iminente", quandoTxt(F.etaRio), "pelo ritmo de subida do rio", true);
+    return qk("Enchente na cidade",v, quandoTxt(F.etaRio), "pelo ritmo de subida do rio", hl);
   if(F.eta!=null)
-    return qk("Enchente na cidade","possível", quandoTxt(F.eta),
-      "pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm", true);
-  return qk("Enchente na cidade","improvável","nas próximas 48 h", "chuva prevista abaixo do limite", false);
+    return qk("Enchente na cidade",v, quandoTxt(F.eta),
+      "pela chuva prevista · faltam "+fmt(F.now.falta,0)+" mm", hl);
+  return qk("Enchente na cidade",v,"nas próximas 48 h", "chuva prevista abaixo do limite", false);
 }
 
 function qk(k,v,u,sub,hl){ return '<div class="qk'+(hl?' hl':'')+'"><div class="k">'+k+'</div><div class="v">'+v+' <small>'+u+'</small></div><div class="sub">'+sub+'</div></div>'; }

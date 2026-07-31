@@ -13,6 +13,14 @@
 <div class="topo-bg" aria-hidden="true"><svg id="topo" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice"></svg></div>
 <canvas id="storm" aria-hidden="true"></canvas>
 
+<aside class="test-ribbon" id="testRibbon" role="note" aria-label="Aviso sobre a versão em testes">
+  <button class="tr-close" id="testRibbonClose" type="button" aria-label="Fechar aviso">×</button>
+  <span class="tr-tag">Em testes</span>
+  <p class="tr-txt">2 de 4 estações de nível dos rios em funcionamento.</p>
+  <p class="tr-cta">Uma estação custa cerca de R$ 2.000. Empresário, ajude a bancar a
+    próxima — fale com a <a href="https://wa.me/5551985954831" target="_blank" rel="noopener">ACISA</a>.</p>
+</aside>
+
 <div class="wrap">
   <div class="realiza">
     <span class="realiza-tag">Realização</span>
@@ -59,7 +67,7 @@
     <!-- RISCO -->
     <section class="panel risk reveal d1" aria-labelledby="risk-h">
       <div class="risk-top">
-        <span class="risk-badge baixo" id="risk-badge"><span class="pdot"></span><span id="risk-label">avaliando</span></span>
+        <span class="risk-badge nivel-1" id="risk-badge"><span class="pdot"></span><span id="risk-label">avaliando</span></span>
         <span class="risk-when" id="risk-when"></span>
       </div>
       <h2 class="risk-headline" id="risk-h">Carregando dados das estações e da previsão…</h2>
@@ -119,6 +127,9 @@
     Leituras das estações da rede e previsão do Open-Meteo, publicadas como medidas, sem
     garantia de disponibilidade ou exatidão. Não é aviso oficial: alertas e orientações de
     segurança são da Defesa Civil e do Corpo de Bombeiros.
+    <br>* Escala de risco de 1 a 10 construída a partir de poucos eventos reais medidos
+    (o principal: 29/07/2026) — não é uma probabilidade estatística calibrada. Conforme
+    mais enchentes reais forem confirmadas, os pontos de corte serão reajustados.
   </p>
 
 </div>

@@ -21,10 +21,17 @@ function renderAll(){
 }
 function showEmpty(){ $("#risk-h").textContent="Sem dados das estações no momento."; $("#risk-drivers").textContent="Tentando novamente em instantes."; buildContours(); document.body.classList.add("ready"); }
 
+function initTestRibbon(){
+  var el=$("#testRibbon"); if(!el) return;
+  if(localStorage.getItem("rios_ribbon_fechado")==="1"){ el.remove(); return; }
+  var btn=$("#testRibbonClose");
+  if(btn) btn.addEventListener("click", function(){ localStorage.setItem("rios_ribbon_fechado","1"); el.remove(); });
+}
+
 async function cycle(){
   try{ await Promise.all([loadStations(), loadForecast()]); if(!APP.ST.__anyData){ showEmpty(); return; } renderAll(); }
   catch(e){ console.error(e); showEmpty(); }
 }
 
-function boot(){ StormSky.init(document.getElementById("storm")); initStormBtn(); cycle(); var DEV=(location.hostname==="localhost"||location.hostname==="127.0.0.1"); setInterval(cycle, (DEV?15:5)*60*1000); }
+function boot(){ StormSky.init(document.getElementById("storm")); initStormBtn(); initTestRibbon(); cycle(); var DEV=(location.hostname==="localhost"||location.hostname==="127.0.0.1"); setInterval(cycle, (DEV?15:5)*60*1000); }
 if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",boot); else boot();

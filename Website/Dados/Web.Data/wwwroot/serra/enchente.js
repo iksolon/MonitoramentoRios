@@ -20,22 +20,16 @@ export function computeRisk(){
   const obs12=APP.NET.rain12, obsNow=APP.NET.rainNow;
   const nowcast = APP.FC?APP.FC.nowMm:0;
   const raining = (obsNow!=null&&obsNow>=0.2) || nowcast>=0.3 || maxTrend>=8;
-  /* situacao AGORA = veredito do detector (chuva caida + regua observada).
-     Com `arrefeceu` (regua confirmando descida, sem chuva), o canal de chuva
-     medida (F.chuva) e so um corroborador redundante de quando a regua nao
-     e confiavel — com regua fresca dizendo que ja baixou, ele nao deve
-     segurar "Risco atencao" sozinho. Aferido 29/07/2026 20h34: BE01 a 89,9 %
-     da cota e caindo, chuva de 24 h ainda em 77 % do limiar (solo encharcado)
-     — sem este ajuste o selo dizia "Risco atencao" com o rio ja abaixo do
-     limite, sem chuva e sem previsao. */
-  let cur = F.ok ? (F.arrefeceu ? F.rio : F.level) : 0;
-  if(nowcast>=10) cur=Math.min(3,cur+1);
-  // chuva prevista que ja estoura o limiar dentro de 12 h e ATENCAO no minimo
-  if(F.ok&&F.eta!=null&&F.eta<=12) cur=Math.max(cur,2);
-  let fut=0, futWhen="";
-  if(APP.FC){ const pd=APP.FC.peakDay; if((pd&&pd.mm>=80)||APP.FC.next72>=100) fut=3; else if((pd&&pd.mm>=40)||APP.FC.next72>=60) fut=2; else if((pd&&pd.mm>=15)||APP.FC.next24>=10) fut=1; if(pd) futWhen=pd.date; }
+  /* cur/fut vem prontos de cityFlood() — a mesma fonte que o card
+     "Enchente na cidade" le (F.indiceAgora/F.indiceFuturo), pra selo e card
+     nunca mostrarem numeros diferentes na mesma leitura. O nowcast forte, o
+     piso de previsao <=12h e o reforco/teto da regua (inclusive arrefeceu)
+     ja estao dentro de indiceAgora()/indiceFuturo(), em enchente.js. */
+  const cur = F.ok ? F.indiceAgora : 1;
+  const fut = F.ok ? F.indiceFuturo : 1;
+  const futWhen = (APP.FC&&APP.FC.peakDay) ? APP.FC.peakDay.date : "";
   const level=Math.max(cur,fut);
-  const drivenBy = fut>cur?"previsto":(cur>0?"agora":"previsto");
+  const drivenBy = fut>cur?"previsto":(cur>1?"agora":"previsto");
   APP.RISK={ level, cur, fut, drivenBy, raining, maxFrac, maxTrend, worst, nowcast, futWhen, obs12, obsNow, flood:F };
 }
 
@@ -134,6 +128,86 @@ const RECUO_SECO_H=3, RECUO_SECO_MM=2, RECUO_QUEDA=2, RECUO_MARGEM=0.15;
    mais perto do lado observado com agua na rua. Vale so em recuo; na subida
    quem manda continua sendo o limite da regua, que da a antecedencia. */
 const FLOOD_FRAC=1.45;
+
+/* ===== INDICE DE RISCO (1-10) ==========================================
+   Camada de EXIBICAO por cima do motor acima — nao muda nenhuma regra de
+   deteccao (canalRio/cityFlood continuam decidindo os estados internos do
+   jeito que sempre decidiram). So remapeia os MESMOS sinais numa escala
+   continua de 1 a 10, porque uma palavra ("risco baixo"/"improvavel") tem
+   que escolher um corte binario que a rede de sensores nao sustenta.
+
+   A rede so tem duas reguas confiaveis (LEVEL_TRUST em config.js: GLLS e
+   BE01, as duas na bacia do Areia) e nenhuma no Rio Rolante, que tambem
+   alaga a cidade. BE01 ainda cai do ar com frequencia. Por isso a regua
+   NUNCA pode dominar sozinha o indice — quem manda e chuva medida + solo
+   (cobre a bacia inteira, sempre disponivel); a regua so reforca quando
+   esta fresca e concorda, com teto proprio bem mais baixo.
+
+   Pontos de corte aferidos com o UNICO evento real medido ate agora
+   (29/07/2026) — ver docs/superpowers/specs/2026-07-30-indice-risco-
+   numerico-design.md para a justificativa de cada ancora. Conforme mais
+   enchentes reais forem confirmadas em campo, estes pontos devem ser
+   reajustados; e por isso ficam isolados aqui, numa unica tabela por
+   canal, em vez de espalhados pelo codigo. */
+function escalaRisco(pontos, x){
+  if(!(x>pontos[0][0])) return pontos[0][1];
+  for(let i=1;i<pontos.length;i++){
+    const [x0,y0]=pontos[i-1], [x1,y1]=pontos[i];
+    if(x<=x1) return y0+(y1-y0)*(x-x0)/(x1-x0);
+  }
+  return pontos[pontos.length-1][1];
+}
+/* Base: chuva medida vs. limiar ajustado pelo solo (agora.ratio). 0,75 e
+   1,00 sao os mesmos cortes que ja viram chuva=2/chuva=3 hoje; 1,35 e o
+   SEV_GRANDE ja calibrado. */
+const ESCALA_CHUVA=[[0,1],[0.5,4],[0.75,6],[1.0,8],[1.35,10]];
+/* Reforco da regua (rio.frac), teto em 7 — nunca chega em 10 sozinha,
+   porque e 1-2 sensores intermitentes, nunca no Rio Rolante. */
+const ESCALA_REGUA=[[0,1],[0.85,4],[1.0,6],[1.35,7]];
+/* Chuva caindo AGORA (mm/h do nowcast) empurra o indice suavemente: 10 mm/h
+   e o mesmo corte que ja valia o bonus fixo (+2) na escala 0-3 antiga de
+   computeRisk — aqui vira rampa em vez de degrau seco, que e o padrao de
+   falha ("veredito piscando") que o proprio motor ja documentou noutro
+   limiar (ver comentario sobre o limiar 72<->80mm mais acima no arquivo). */
+const ESCALA_NOWCAST=[[0,0],[10,2]];
+/* Previsao: mesmos cortes de mm que computeRisk ja usa (15/40/80mm no pico
+   do dia; 10mm em 24h; 60/100mm em 72h) — tres testes independentes, o
+   pior vence, igual a logica OR que ja existia. Teto em 9: previsao nunca
+   vira confirmacao. */
+const ESCALA_PREV_DIA=[[0,1],[15,4],[40,6],[80,9]];
+const ESCALA_PREV_24=[[0,1],[10,4]];
+const ESCALA_PREV_72=[[0,1],[60,6],[100,9]];
+/* indice "agora": o maior entre chuva+solo e o reforco da regua (quando
+   fresca, confiavel, e nao em recuo confirmado — reaproveita `rio.arrefeceu`,
+   que ja vem dentro do proprio `rio`). Chuva caindo agora soma a rampa de
+   ESCALA_NOWCAST; previsao que bate o limiar em ate 12h garante piso de 5
+   (faixa "atencao"). */
+function indiceAgora(agoraRatio, rio, eta){
+  const base=escalaRisco(ESCALA_CHUVA, agoraRatio);
+  const reforco=(rio.estacao && rio.estacao.lvFresh && !rio.arrefeceu)
+    ? escalaRisco(ESCALA_REGUA, rio.frac) : 0;
+  let idx=Math.max(base, reforco);
+  const nowcast=APP.FC?APP.FC.nowMm:0;
+  idx+=escalaRisco(ESCALA_NOWCAST, nowcast);
+  if(eta!=null&&eta<=12) idx=Math.max(idx,5);
+  /* Piso: se o proprio canalRio ja confirmou nivel 3 (frac>=1, seu ramo
+     incondicional que nao testa arrefeceu — rio de fato ainda acima do
+     limite agora), o indice nunca pode ficar baixo so porque o reforco da
+     regua foi suprimido por arrefeceu. O piso reage ao veredito que o motor
+     ja calculou, nao decide nada por conta propria. */
+  if(rio.nivel>=3) idx=Math.max(idx,9);
+  return Math.round(Math.min(10, Math.max(1, idx)));
+}
+/* indice "futuro": o pior entre as tres janelas de previsao ja usadas
+   hoje, cada uma na sua propria escala com o mesmo teto (9). */
+function indiceFuturo(){
+  if(!APP.FC) return 1;
+  const pd=APP.FC.peakDay;
+  const porDia=escalaRisco(ESCALA_PREV_DIA, pd?pd.mm:0);
+  const porNext72=escalaRisco(ESCALA_PREV_72, APP.FC.next72||0);
+  const porNext24=escalaRisco(ESCALA_PREV_24, APP.FC.next24||0);
+  return Math.round(Math.max(porDia, porNext72, porNext24));
+}
 
 function soilIndex(obs){ let a=0; for(let i=0;i<obs.length;i++) a=a*SOIL_K+(obs[i]||0); return a; }
 function soilSat(api){ return clamp((api-SOIL_DRY)/(SOIL_WET-SOIL_DRY),0,1); }
@@ -276,7 +350,7 @@ function magnitude(agora, rio, pico){
 }
 function cityFlood(){
   const obs=netRainSeries();
-  if(!obs&&!APP.FC) return {ok:false, level:0};
+  if(!obs&&!APP.FC) return {ok:false, level:0, indiceAgora:1, indiceFuturo:1, indice:1};
   const hist=obs||new Array(HMAX).fill(0);
   const rio=canalRio(chuvaRecente(hist,RECUO_SECO_H)<RECUO_SECO_MM);
   /* CANAL CHUVA, parte medida: o que ja caiu. */
@@ -285,8 +359,11 @@ function cityFlood(){
   const futuro=projetaChuva(hist, api, agora);
   const chuva = agora.ratio>=1?3 : agora.ratio>=0.75?2 : agora.ratio>=0.5?1 : 0;
   const mag=magnitude(agora, rio, futuro.pico);
+  const idxAgora=indiceAgora(agora.ratio, rio, futuro.eta);
+  const idxFuturo=indiceFuturo();
   return {ok:true, level:Math.max(rio.nivel,chuva),
           rio:rio.nivel, chuva, arrefeceu:rio.arrefeceu,
+          indiceAgora:idxAgora, indiceFuturo:idxFuturo, indice:Math.max(idxAgora,idxFuturo),
           api, sat:agora.sat, solo:soilLabel(agora.sat), lim12:limite12(agora.sat),
           now:agora, peak:futuro.pico, peakAt:futuro.picoEm, eta:futuro.eta, etaRio:etaDoRio(rio),
           sev:mag.sev, sevFut:mag.sevFut, forca:mag.forca, excesso:mag.excesso};

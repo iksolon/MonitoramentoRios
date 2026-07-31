@@ -1,5 +1,15 @@
 # Índice de risco numérico (1-10) — troca dos textos categóricos
 
+> **Caminho dos arquivos:** este documento referencia `serra.html`,
+> `serra.css`, `enchente.js`, `config.js`, `estado.js`, `painel.js` sem
+> prefixo por brevidade — todos ficam em
+> `Website/Dados/Web.Data/wwwroot/serra*` (estrutura oficial mantida pelo
+> Rafael). A implementação só toca arquivos dentro desse prefixo — nunca
+> `index.html`, `rsrl.html`, `rsrl.css`, `rsrl.js`, `rsrl2.html`, `tempo.html`
+> (congelados) nem o backend C# (`Controllers/`, `DAO/`, `BkgWorkers/`).
+> Estrutura de arquivos separados (HTML/CSS/JS) é importante pra pipeline e
+> se mantém — nenhuma junção de arquivo nesta mudança.
+
 ## Contexto e motivação
 
 Hoje o app comunica risco de enchente em palavras: o selo no topo diz "Risco
