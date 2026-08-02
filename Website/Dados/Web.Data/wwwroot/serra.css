@@ -297,16 +297,13 @@ section{ margin-top: 18px; }
 /* Estado vazio do bloco de contexto: ocupa a grade inteira. */
 .ctx-vazio{ grid-column: 1 / -1; font-size: 0.85rem; color: var(--muted); }
 
-/* ===== Rede + contexto (linha superior) ===== */
-.top-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 14px 0 2px; }
+/* ===== Rede + contexto (agora no fim da pagina, depois das secoes
+   principais de risco/chuva/rios — sao infraestrutura de apoio, nao o
+   que importa primeiro) ===== */
+.top-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 18px 0 0; }
 .top-row .netcard{ margin:0; }
 .ctx-sub{ font-size:0.78rem; color:var(--muted); margin: 2px 2px 8px; }
-@media (max-width:620px){
-  .top-row{ grid-template-columns: 1fr; order:2; }
-  .wrap{ display:flex; flex-direction:column; }
-  main{ order:1; }
-  .disclaimer{ order:3; }
-}
+@media (max-width:620px){ .top-row{ grid-template-columns: 1fr; } }
 
 /* Nota previsao */
 .forecast-note{ display:flex; align-items:flex-start; gap:12px; padding: 14px 16px; }
