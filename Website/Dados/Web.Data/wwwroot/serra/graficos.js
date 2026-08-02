@@ -18,16 +18,25 @@ import { svgText } from "./svg.js";
    e devolve marcacao; nenhum le estado global. */
 const CAIXA_CHUVA={Wv:360,Hv:172,L:30,R:12,T:24,B:26};
 
-/* Faixa clara = dia. O fundo do grafico e noite; a faixa marca so o intervalo
-   real entre nascer e por do sol de cada dia (calculado pra Rolante, ver
-   sunTimesFor) — assim da pra ver de longe se o pico cai de dia ou de
-   madrugada, sem precisar ler a hora em cada barra. */
+/* O gráfico começa pelo fundo da noite; as faixas amarelas mostram o dia
+   real entre nascer e pôr do sol em Rolante. Sol e lua ficam no começo de
+   cada período visível, para situar o horário sem competir com a chuva. */
+function iconeSol(x,y){
+  return '<g fill="none" stroke="var(--day-deep)" stroke-width="1.2" stroke-linecap="round"><circle cx="'+x+'" cy="'+y+'" r="2.2"/><path d="M '+x+' '+(y-5)+' v1.4 M '+x+' '+(y+3.6)+' v1.4 M '+(x-5)+' '+y+' h1.4 M '+(x+3.6)+' '+y+' h1.4 M '+(x-3.5)+' '+(y-3.5)+' l1 1 M '+(x+2.5)+' '+(y+2.5)+' l1 1 M '+(x-3.5)+' '+(y+3.5)+' l1 -1 M '+(x+2.5)+' '+(y-2.5)+' l1 -1"/></g>';
+}
+function iconeLua(x,y){
+  return '<path d="M '+(x+2.8)+' '+(y-5)+' A 5 5 0 1 0 '+(x+2.8)+' '+(y+5)+' A 3.6 3.6 0 0 1 '+(x+2.8)+' '+(y-5)+'" fill="none" stroke="var(--night-deep)" stroke-width="1.2" stroke-linecap="round"/>';
+}
 function faixasDeDia(C, tt, n, timeToX){
-  const out=[], ini=new Date(tt[0]), fim=new Date(tt[n-1]);
+  const y=C.T, h=C.Hv-C.B-C.T, limiteE=C.L+5, limiteD=C.Wv-C.R-5;
+  const out=['<rect x="'+C.L+'" y="'+y+'" width="'+(C.Wv-C.L-C.R)+'" height="'+h+'" fill="var(--night)" opacity="0.22"/>'];
+  const ini=new Date(tt[0]), fim=new Date(tt[n-1]);
   for(let dt=new Date(ini.getFullYear(),ini.getMonth(),ini.getDate()); dt<=fim; dt.setDate(dt.getDate()+1)){
-    const sol=sunTimesFor(dt);
-    const x0=timeToX(sol.sunrise.getTime()), x1=timeToX(sol.sunset.getTime());
-    if(x1>x0) out.push('<rect x="'+x0.toFixed(1)+'" y="'+C.T+'" width="'+(x1-x0).toFixed(1)+'" height="'+(C.Hv-C.B-C.T)+'" fill="var(--warn)" opacity="0.09"/>');
+    const sol=sunTimesFor(dt), x0=timeToX(sol.sunrise.getTime()), x1=timeToX(sol.sunset.getTime());
+    if(x1<=x0) continue;
+    out.push('<rect x="'+x0.toFixed(1)+'" y="'+y+'" width="'+(x1-x0).toFixed(1)+'" height="'+h+'" fill="var(--day)" opacity="0.24"/>');
+    if(x0>=limiteE&&x0<=limiteD) out.push(iconeSol(x0+6,y+8));
+    if(x1>=limiteE&&x1<=limiteD) out.push(iconeLua(x1+6,y+8));
   }
   return out;
 }
