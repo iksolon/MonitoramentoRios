@@ -17,6 +17,10 @@ import { svgText } from "./svg.js";
    exigia rolar por todos. Cada um recebe a caixa (C) com as medidas do grafico
    e devolve marcacao; nenhum le estado global. */
 const CAIXA_CHUVA={Wv:360,Hv:172,L:30,R:12,T:24,B:26};
+/* Vento forte, pedido explicito do dono do painel: acima de 40 km/h vira
+   simbolo no grafico horario; abaixo disso fica oculto, sem poluir a leitura
+   normal de chuva com um dado que quase nunca importa. */
+const VENTO_LIMIAR=40;
 
 /* O gráfico começa pelo fundo da noite; as faixas amarelas mostram o dia
    real entre nascer e pôr do sol em Rolante. Sol e lua ficam no começo de
@@ -26,6 +30,12 @@ function iconeSol(x,y){
 }
 function iconeLua(x,y){
   return '<path d="M '+(x+2.8)+' '+(y-5)+' A 5 5 0 1 0 '+(x+2.8)+' '+(y+5)+' A 3.6 3.6 0 0 1 '+(x+2.8)+' '+(y-5)+'" fill="none" stroke="var(--night-deep)" stroke-width="1.2" stroke-linecap="round"/>';
+}
+/* Vento forte: mesmo tracado do icone "wind" (Feather), reescalado. Centraliza
+   em (x,y) porque o path original tem o desenho deslocado do (0,0) do viewBox. */
+function iconeVento(x,y){
+  const s=0.34;
+  return '<g transform="translate('+x.toFixed(1)+','+y.toFixed(1)+') scale('+s+') translate(-11,-12)" fill="none" stroke="var(--alert)" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></g>';
 }
 function faixasDeDia(C, tt, n, timeToX){
   const y=C.T, h=C.Hv-C.B-C.T, limiteE=C.L+5, limiteD=C.Wv-C.R-5;
@@ -58,6 +68,13 @@ function barrasDeChuva(C, pr, tt, n, xs, ys, bw){
     const passou=new Date(tt[i]).getTime()<agora-3600000;
     out.push('<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bw.toFixed(1)+'" height="'+Math.max(0.6,h).toFixed(1)+'" rx="1" fill="'+cor+'"'+(passou?' opacity="0.38"':'')+'/>');
   }
+  return out;
+}
+/* So desenha o icone na hora que passa do limiar — as demais ficam sem
+   marcacao nenhuma, e nao um icone "fraco" ou apagado. */
+function marcasDeVento(C, ve, n, xs){
+  const y=C.T+12, out=[];
+  for(let i=0;i<n;i++) if((ve[i]||0)>=VENTO_LIMIAR) out.push(iconeVento(xs(i),y));
   return out;
 }
 function eixoDeHoras(C, tt, n, xs){
@@ -107,7 +124,7 @@ export function chartRain(){
     svg.innerHTML=svgText("previsão indisponível",{x:180,y:90,ancora:"meio",tam:11});
     return;
   }
-  const pr=APP.FC.hourly.p, tt=APP.FC.hourly.t, n=pr.length;
+  const pr=APP.FC.hourly.p, tt=APP.FC.hourly.t, ve=APP.FC.hourly.v||[], n=pr.length;
   const yMax=Math.max(2,Math.ceil(Math.max.apply(null,pr)*1.15));
   const xs=i=>C.L+i*(C.Wv-C.L-C.R)/(n-1);
   const ys=v=>(C.Hv-C.B)-v/yMax*(C.Hv-C.B-C.T);
@@ -121,9 +138,10 @@ export function chartRain(){
     eixoDeHoras(C,tt,n,xs),
     rotulosDeDia(C,tt,n,xs),
     marcaAgora(C,tt,n,xs),
+    marcasDeVento(C,ve,n,xs),
     camadaDeHover(C)
   ).join("");
-  hookRainHover(svg,{Wv:C.Wv,L:C.L,R:C.R,n:n,bw:bw,xs:xs,pr:pr,tt:tt});
+  hookRainHover(svg,{Wv:C.Wv,L:C.L,R:C.R,n:n,bw:bw,xs:xs,pr:pr,tt:tt,ve:ve});
 }
 
 function hookRainHover(svg,C){
@@ -133,11 +151,12 @@ function hookRainHover(svg,C){
     const r=svg.getBoundingClientRect(); if(!r.width) return;
     const vx=(ev.clientX-r.left)*C.Wv/r.width;
     const i=Math.round(clamp((vx-C.L)/((C.Wv-C.L-C.R)/(C.n-1)),0,C.n-1));
-    const x=C.xs(i), mm=C.pr[i]||0, d=new Date(C.tt[i]);
+    const x=C.xs(i), mm=C.pr[i]||0, vento=(C.ve&&C.ve[i])||0, d=new Date(C.tt[i]);
     band.setAttribute("x",(x-C.bw/2-0.8).toFixed(1)); band.setAttribute("width",(C.bw+1.6).toFixed(1));
     line.setAttribute("x1",x.toFixed(1)); line.setAttribute("x2",x.toFixed(1));
     band.setAttribute("visibility","visible"); line.setAttribute("visibility","visible");
-    tipShow('<b>'+diaCurto(C.tt[i])+' · '+String(d.getHours()).padStart(2,"0")+'h</b><br><span class="kv">'+fmt(mm,1)+' mm/h · '+rainWord(mm)+'</span>',ev);
+    const ventoTx=vento>=VENTO_LIMIAR?' · vento forte ~'+fmt(vento,0)+' km/h':'';
+    tipShow('<b>'+diaCurto(C.tt[i])+' · '+String(d.getHours()).padStart(2,"0")+'h</b><br><span class="kv">'+fmt(mm,1)+' mm/h · '+rainWord(mm)+ventoTx+'</span>',ev);
   }
   function off(){ band.setAttribute("visibility","hidden"); line.setAttribute("visibility","hidden"); tipHide(); }
   hit.addEventListener("mousemove",at);

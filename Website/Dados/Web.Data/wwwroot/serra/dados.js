@@ -339,6 +339,9 @@ export async function loadForecast(){
     if(!rows || !rows.length){ APP.FC=null; return; }
     const horas=rows.map(r=>r.forecastUTC.endsWith("Z")?r.forecastUTC:r.forecastUTC+"Z");
     const mm=rows.map(r=>r.precipitacao||0);
+    /* item.ventoVelocidade ja vem do /weather/ext (mesmo endpoint que
+       tempo.html/rsrl.js ja usam) — so precisa entrar na janela horaria. */
+    const vento=rows.map(r=>r.ventoVelocidade||0);
     const agora=Date.now();
     const inicio=primeiraLinhaValida(horas, agora);
     const dias=agregaPorDia(horas, mm, rows, inicio);
@@ -356,7 +359,7 @@ export async function loadForecast(){
       days: dias,
       peakDay: diaDePico(dias),
       nowMm: chuvaAgora(horas, mm, inicio, agora),
-      hourly: { t:horas.slice(cauda, inicio+48), p:mm.slice(cauda, inicio+48) }
+      hourly: { t:horas.slice(cauda, inicio+48), p:mm.slice(cauda, inicio+48), v:vento.slice(cauda, inicio+48) }
     };
   }catch(e){ APP.FC=null; }
 }
