@@ -6,7 +6,7 @@
 import { APP } from "./estado.js";
 import { HMAX, CH } from "./config.js";
 import { $, fmt, clamp, smoothPath, diaCurto, sunTimesFor, horaDe } from "./util.js";
-import { codeTail, kmTxt } from "./config.js";
+import { codeTail, kmTxt, VENTO_LIMIAR } from "./config.js";
 import { rainPulse, rainNowOf } from "./dados.js";
 import { pulseTxt, rainWord } from "./rotulos.js";
 import { tipShow, tipHide } from "./tooltip.js";
@@ -17,10 +17,6 @@ import { svgText } from "./svg.js";
    exigia rolar por todos. Cada um recebe a caixa (C) com as medidas do grafico
    e devolve marcacao; nenhum le estado global. */
 const CAIXA_CHUVA={Wv:360,Hv:172,L:30,R:12,T:24,B:26};
-/* Vento forte, pedido explicito do dono do painel: acima de 40 km/h vira
-   simbolo no grafico horario; abaixo disso fica oculto, sem poluir a leitura
-   normal de chuva com um dado que quase nunca importa. */
-const VENTO_LIMIAR=40;
 
 /* O gráfico começa pelo fundo da noite; as faixas amarelas mostram o dia
    real entre nascer e pôr do sol em Rolante. Sol e lua ficam no começo de

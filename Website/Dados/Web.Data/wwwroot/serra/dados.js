@@ -314,17 +314,26 @@ function agregaPorDia(horas, mm, rows, inicio){
   const porDia=new Map();
   for(let k=inicio;k<horas.length;k++){
     const dia=new Date(new Date(horas[k]).getTime()-3*3600000).toISOString().slice(0,10);
-    if(!porDia.has(dia)) porDia.set(dia,{mm:0,prob:0});
+    if(!porDia.has(dia)) porDia.set(dia,{mm:0,prob:0,windMax:0});
     const e=porDia.get(dia);
     e.mm += mm[k]||0;
     e.prob = Math.max(e.prob, rows[k].precipitacaoProb||0);
+    e.windMax = Math.max(e.windMax, rows[k].ventoVelocidade||0);
   }
-  return Array.from(porDia,([date,v])=>({date, mm:v.mm, prob:v.prob})).slice(0,7);
+  return Array.from(porDia,([date,v])=>({date, mm:v.mm, prob:v.prob, windMax:v.windMax})).slice(0,7);
 }
 function diaDePico(dias){
   let pico=null;
   dias.slice(0,6).forEach(d=>{ if(!pico||d.mm>pico.mm) pico=d; });
   return pico;
+}
+/* Mesmo horizonte do pico de chuva (6 dias): dia com o vento mais forte
+   previsto. Quem decide se isso vira frase e o chamador (compara com
+   VENTO_LIMIAR) — aqui e so o dado. */
+function diaDeVento(dias){
+  let d=null;
+  dias.slice(0,6).forEach(x=>{ if(!d||x.windMax>d.windMax) d=x; });
+  return d;
 }
 /* "chuva agora pela previsao" so vale se a linha casada estiver mesmo na hora
    corrente. Sem essa guarda, tabela de previsao adiantada ou parada fazia o
@@ -358,6 +367,7 @@ export async function loadForecast(){
       next72: sum(mm.slice(inicio, inicio+72)),
       days: dias,
       peakDay: diaDePico(dias),
+      windDay: diaDeVento(dias),
       nowMm: chuvaAgora(horas, mm, inicio, agora),
       hourly: { t:horas.slice(cauda, inicio+48), p:mm.slice(cauda, inicio+48), v:vento.slice(cauda, inicio+48) }
     };
