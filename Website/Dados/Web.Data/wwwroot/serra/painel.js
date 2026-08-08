@@ -80,7 +80,7 @@ function manchete(R){
   /* So entra na frase quando passa do limiar (mesmo do grafico horario) —
      abaixo disso o vento nao muda em nada a leitura do dia. */
   const fraseVento = (vento&&vento.windMax>=VENTO_LIMIAR)
-    ? " Vento forte previsto: ~"+fmt(vento.windMax,0)+" km/h em "+diaCurto(vento.date)+"."
+    ? " Rajada forte prevista: ~"+fmt(vento.windMax,0)+" km/h em "+diaCurto(vento.date)+"."
     : "";
   if(pico&&pico.mm>=15)
     return "Sem chuva agora. Previsão aponta ~"+fmt(pico.mm,0)+" mm em "+diaCurto(pico.date)+" (prob. "+fmt(pico.prob,0)+"%)."+fraseVento;
@@ -214,7 +214,7 @@ export function renderForecast(){
 function dropSvg(){ return '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 2 C 12.5 6,16 8.5,16 12 a6 6 0 1 1 -12 0 C 4 8.5,7.5 6,10 2 Z" fill="var(--teal)" opacity="0.9"/><path d="M10 2 C 12.5 6,16 8.5,16 12 a6 6 0 1 1 -12 0 C 4 8.5,7.5 6,10 2 Z" fill="none" stroke="var(--teal-deep)" stroke-width="1"/></svg>'; }
 /* Mesmo simbolo do grafico horario, so que por dia: um card ganha o badge
    quando o vento maximo daquele dia passa de VENTO_LIMIAR. */
-function windSvg(kmh){ return '<div class="fc-wind" title="Vento forte previsto: ~'+fmt(kmh,0)+' km/h"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--alert)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></div>'; }
+function windSvg(kmh){ return '<div class="fc-wind" title="Rajada forte prevista: ~'+fmt(kmh,0)+' km/h"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--alert)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.59 4.59A2 2 0 1 1 11 8H2m10.59 11.41A2 2 0 1 0 14 16H2m15.73-8.27A2.5 2.5 0 1 1 19.5 12H2"/></svg></div>'; }
 
 /* ===== RENDER: reguas ===== */
 
